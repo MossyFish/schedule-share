@@ -1096,7 +1096,7 @@ export function mountApp(root) {
       var box = el("div", evtClass);
       box.style.top = top + "px"; box.style.height = height + "px";
       box.innerHTML = '<span class="t">' + esc(e.title) + '</span>' +
-        (e.location ? '<span class="l">' + esc(e.location) + "</span>" : "") +
+        (e.location ? '<span class="l">' + esc(shortenLocation(e.location)) + "</span>" : "") +
         '<span class="time">' + fmtTime(e.start) + "–" + fmtTime(e.end) + "</span>";
       col.appendChild(box);
     });
