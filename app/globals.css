@@ -111,7 +111,6 @@
   }
   #auth .brand .mark svg { width: 24px; height: 24px; }
   #auth .brand-text h1 { margin: 0; font-size: 1.4rem; font-weight: 800; line-height: 1.1; }
-  #auth .brand-text p { margin: 3px 0 0; font-size: 0.85rem; color: var(--muted); }
 
   #auth .tabs {
     display: flex;
@@ -353,9 +352,9 @@
   .daycard .dh .dow.today { color: var(--accent); }
   .daycard .dh .dnum { font-size: 0.78rem; color: var(--faint); }
   .daycard .mini { position: relative; background: var(--surface-2); border-radius: 10px; border: 1px solid var(--line); overflow: hidden; }
-  .daycard .mini .personcol { position: absolute; top:0; bottom:0; width: 50%; }
-  .daycard .mini .personcol.you { left: 0; }
-  .daycard .mini .personcol.them { right: 0; }
+  .daycard .mini .personcol { position: absolute; top:0; bottom:0; left: 0; width: 100%; }
+  .daycard .mini.dual .personcol.you { left: 0; width: 50%; }
+  .daycard .mini.dual .personcol.them { left: auto; right: 0; width: 50%; }
   .daycard .evt { border-radius: 4px; padding: 2px 4px; font-size: 0; border-left-width: 2px; }
   .daycard .evt .t, .daycard .evt .l, .daycard .evt .time { display: none; }
 

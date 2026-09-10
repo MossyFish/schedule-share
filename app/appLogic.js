@@ -34,7 +34,6 @@ var SHELL_HTML = `
       </div>
       <div class="brand-text">
         <h1>Schedule Share</h1>
-        <p>Easy schedule comparison with friends</p>
       </div>
     </div>
     <div id="auth-body"></div>
@@ -558,13 +557,18 @@ export function mountApp(root) {
 
     if (S.mySchedule && S.mySchedule.events && S.mySchedule.events.length) {
       var row = el("div", "status-row");
-      row.innerHTML = '<span class="swatch"></span><div><p>' + S.mySchedule.events.length + ' classes loaded <span class="muted">· from ' +
+      row.innerHTML = '<span class="swatch"></span><div style="flex:1;min-width:0"><p>' + S.mySchedule.events.length + ' classes loaded <span class="muted">· from ' +
         (S.mySchedule.source === "ics" ? "Google Calendar file" : "screenshot") + '</span></p></div>';
+      var replaceIcon = el("button", "pencil", '<svg viewBox="0 0 24 24" fill="none"><path d="M4 20l.9-3.6L15.6 5.7a1.5 1.5 0 012.1 0l1.6 1.6a1.5 1.5 0 010 2.1L8.6 20.1 4 20z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>');
+      replaceIcon.title = "Replace schedule";
+      replaceIcon.onclick = openUploadModal;
+      row.appendChild(replaceIcon);
       card.appendChild(row);
-      var replaceBtn = el("button", "btn btn-outline btn-sm", "Replace schedule");
-      replaceBtn.style.marginTop = "12px";
-      replaceBtn.onclick = openUploadModal;
-      card.appendChild(replaceBtn);
+      var viewFullBtn = el("button", "btn btn-primary btn-sm", "View full schedule");
+      viewFullBtn.style.marginTop = "12px";
+      viewFullBtn.style.width = "100%";
+      viewFullBtn.onclick = openMySchedule;
+      card.appendChild(viewFullBtn);
     } else {
       var grid = el("div", "upload-grid");
       var t1 = el("div", "upload-tile",
@@ -783,8 +787,16 @@ export function mountApp(root) {
     return { startMin: startMin, endMin: endMin };
   }
 
+  function openMySchedule() {
+    S.compare = { targetId: null, mode: "week", schedule: null, solo: true };
+    $("#app").style.display = "none";
+    $("#compare").style.display = "flex";
+    renderCompareHeader();
+    renderCompareBody();
+  }
+
   async function openCompare(targetId) {
-    S.compare = { targetId: targetId, mode: "day", schedule: null };
+    S.compare = { targetId: targetId, mode: "day", schedule: null, solo: false };
     $("#app").style.display = "none";
     $("#compare").style.display = "flex";
     renderCompareHeader();
@@ -810,7 +822,9 @@ export function mountApp(root) {
     var left = el("div", "left");
     var back = el("button", "backbtn", '<svg viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
     back.onclick = closeCompare;
-    var tw = el("div", "titlewrap", "<h2>" + esc(nicknameOf(S.compare.targetId)) + '</h2><p class="sub">vs. you</p>');
+    var tw = S.compare.solo
+      ? el("div", "titlewrap", "<h2>Your Schedule</h2>")
+      : el("div", "titlewrap", "<h2>" + esc(nicknameOf(S.compare.targetId)) + '</h2><p class="sub">vs. you</p>');
     left.appendChild(back); left.appendChild(tw);
     h.appendChild(left);
 
@@ -824,6 +838,7 @@ export function mountApp(root) {
 
   function renderCompareLegend() {
     var l = $("#legend");
+    if (S.compare.solo) { l.innerHTML = ""; return; }
     l.innerHTML = '<div class="item"><span class="dot" style="background:var(--accent)"></span>You</div>' +
       '<div class="item"><span class="dot" style="background:var(--accent2)"></span>' + esc(nicknameOf(S.compare.targetId)) + "</div>";
   }
@@ -833,16 +848,30 @@ export function mountApp(root) {
     var body = $("#compare-body");
     body.innerHTML = "";
     var mine = (S.mySchedule && S.mySchedule.events) || [];
+
+    if (S.compare.solo) {
+      if (!mine.length) {
+        body.innerHTML = '<p class="empty-note" style="padding:20px 16px;">You haven\'t uploaded a schedule yet.</p>';
+        return;
+      }
+      var soloAxis = computeAxis(mine);
+      var soloSeries = [{ events: mine, cls: "you" }];
+      if (S.compare.mode === "day") renderDayView(body, soloAxis, soloSeries, new Date().getDay());
+      else renderWeekView(body, soloAxis, soloSeries);
+      return;
+    }
+
     var theirs = (S.compare.schedule && S.compare.schedule.events) || [];
     if (!mine.length && !theirs.length) {
       body.innerHTML = '<p class="empty-note" style="padding:20px 16px;">Neither of you has uploaded a schedule yet.</p>';
       return;
     }
     var axis = computeAxis(mine.concat(theirs));
+    var series = [{ events: mine, cls: "you" }, { events: theirs, cls: "them" }];
     if (S.compare.mode === "day") {
-      renderDayView(body, axis, mine, theirs, new Date().getDay());
+      renderDayView(body, axis, series, new Date().getDay());
     } else {
-      renderWeekView(body, axis, mine, theirs);
+      renderWeekView(body, axis, series);
     }
   }
 
@@ -891,7 +920,7 @@ export function mountApp(root) {
     return col;
   }
 
-  function renderDayView(container, axis, mine, theirs, day) {
+  function renderDayView(container, axis, series, day) {
     var pxPerMin = 0.85;
     var wrap = el("div", "daywrap");
     var grid = el("div", "daygrid");
@@ -899,14 +928,13 @@ export function mountApp(root) {
     var planes = el("div", "planecols");
     planes.style.height = ((axis.endMin - axis.startMin) * pxPerMin) + "px";
     planes.appendChild(buildGridlines(axis, pxPerMin));
-    planes.appendChild(buildPersonCol(mine, day, axis, pxPerMin, "you", false));
-    planes.appendChild(buildPersonCol(theirs, day, axis, pxPerMin, "them", false));
+    series.forEach(function (s) { planes.appendChild(buildPersonCol(s.events, day, axis, pxPerMin, s.cls, false)); });
     grid.appendChild(planes);
     wrap.appendChild(grid);
     container.appendChild(wrap);
   }
 
-  function renderWeekView(container, axis, mine, theirs) {
+  function renderWeekView(container, axis, series) {
     var pxPerMin = 0.22;
     var scroller = el("div", "weekscroll");
     var today = new Date();
@@ -919,10 +947,9 @@ export function mountApp(root) {
       var isToday = date.toDateString() === today.toDateString();
       var dh = el("div", "dh", '<div class="dow' + (isToday ? " today" : "") + '">' + DOW_SHORT[day] + '</div><div class="dnum">' + date.getDate() + "</div>");
       card.appendChild(dh);
-      var miniEl = el("div", "mini");
+      var miniEl = el("div", "mini" + (series.length > 1 ? " dual" : ""));
       miniEl.style.height = ((axis.endMin - axis.startMin) * pxPerMin) + "px";
-      miniEl.appendChild(buildPersonCol(mine, day, axis, pxPerMin, "you", true));
-      miniEl.appendChild(buildPersonCol(theirs, day, axis, pxPerMin, "them", true));
+      series.forEach(function (s) { miniEl.appendChild(buildPersonCol(s.events, day, axis, pxPerMin, s.cls, true)); });
       card.appendChild(miniEl);
       scroller.appendChild(card);
     });
