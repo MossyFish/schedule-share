@@ -29,12 +29,15 @@ var SHELL_HTML = `
   <!-- AUTH -->
   <div id="auth">
     <div class="brand">
-      <div class="mark">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M8 2v4M16 2v4M3 10h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><rect x="7" y="13" width="4.5" height="3.5" rx="1" fill="currentColor"/></svg>
+      <div class="brand-left">
+        <div class="mark">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M8 2v4M16 2v4M3 10h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><rect x="7" y="13" width="4.5" height="3.5" rx="1" fill="currentColor"/></svg>
+        </div>
+        <div class="brand-text">
+          <h1>Schedule Share</h1>
+        </div>
       </div>
-      <div class="brand-text">
-        <h1>Schedule Share</h1>
-      </div>
+      <div id="auth-theme-slot"></div>
     </div>
     <div id="auth-body"></div>
   </div>
@@ -193,6 +196,40 @@ export function mountApp(root) {
     return nick || displayNameOf(id);
   }
 
+  // ---------------- theme ----------------
+  var THEME_KEY = "scheduleShareTheme";
+  function effectiveTheme() {
+    var stored = null;
+    try { stored = localStorage.getItem(THEME_KEY); } catch (e) {}
+    if (stored === "light" || stored === "dark") return stored;
+    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+  function applyStoredThemeIfAny() {
+    var stored = null;
+    try { stored = localStorage.getItem(THEME_KEY); } catch (e) {}
+    if (stored === "light" || stored === "dark") document.documentElement.setAttribute("data-theme", stored);
+    // else: leave unstamped so prefers-color-scheme keeps driving it live.
+  }
+  function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    try { localStorage.setItem(THEME_KEY, theme); } catch (e) {}
+  }
+  function themeIcon(theme) {
+    return theme === "dark"
+      ? '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.5v2.5M12 19v2.5M4.5 12H2M22 12h-2.5M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none"><path d="M20 14.3A8.4 8.4 0 019.7 4a8.4 8.4 0 1010.3 10.3z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>';
+  }
+  function buildThemeToggle() {
+    var btn = el("button", "iconbtn theme-toggle", themeIcon(effectiveTheme()));
+    btn.title = "Toggle light / dark theme";
+    btn.onclick = function () {
+      var next = effectiveTheme() === "dark" ? "light" : "dark";
+      applyTheme(next);
+      root.querySelectorAll(".theme-toggle").forEach(function (b) { b.innerHTML = themeIcon(next); });
+    };
+    return btn;
+  }
+
   // ---------------- ICS parsing ----------------
   function parseICS(text) {
     var rawLines = text.split(/\r\n|\n|\r/);
@@ -254,6 +291,8 @@ export function mountApp(root) {
 
   // ---------------- init ----------------
   function init() {
+    applyStoredThemeIfAny();
+    $("#auth-theme-slot").appendChild(buildThemeToggle());
     if (!firebaseReady) { renderUnavailable(); return; }
     authUnsub = onAuthStateChanged(auth, async function (user) {
       if (!user) {
@@ -456,11 +495,14 @@ export function mountApp(root) {
     av.onclick = openAccountMenu;
     h.appendChild(left);
 
+    var right = el("div", "right");
+    right.appendChild(buildThemeToggle());
     var bell = el("button", "iconbtn");
     bell.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M6 9a6 6 0 1112 0c0 4 1.5 5.5 1.5 5.5H4.5S6 13 6 9z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9.5 17.5a2.5 2.5 0 005 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
     if (S.notifications.length) bell.appendChild(el("span", "dot"));
     bell.onclick = function () { $("#notifs").scrollIntoView({ behavior: "smooth", block: "start" }); };
-    h.appendChild(bell);
+    right.appendChild(bell);
+    h.appendChild(right);
   }
 
   function openAccountMenu() {
@@ -572,10 +614,10 @@ export function mountApp(root) {
     } else {
       var grid = el("div", "upload-grid");
       var t1 = el("div", "upload-tile",
-        '<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M3 15l4.5-4.5 3 3L16 8l5 5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/></svg>' +
+        '<div class="chip"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M3 15l4.5-4.5 3 3L16 8l5 5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/></svg></div>' +
         "<span>Upload screenshot</span><small>Upload screenshot of schedule</small>");
       var t2 = el("div", "upload-tile",
-        '<svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M4 9.5H20" stroke="currentColor" stroke-width="1.7"/><path d="M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>' +
+        '<div class="chip"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M4 9.5H20" stroke="currentColor" stroke-width="1.7"/><path d="M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>' +
         "<span>Upload .ics file</span><small>From Google Calendar</small>");
       t1.onclick = function () { $("#file-shot").click(); };
       t2.onclick = function () { $("#file-ics").click(); };
@@ -591,22 +633,22 @@ export function mountApp(root) {
       var head = el("div", "sec-head");
       head.innerHTML = "<h3>Today</h3><span>" + new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" }) + "</span>";
       todaySec.appendChild(head);
-      var todayCard = el("div", "card");
       var today = new Date().getDay();
       var todays = S.mySchedule.events.filter(function (e) { return e.day === today; }).sort(function (a, b) { return toMin(a.start) - toMin(b.start); });
       if (!todays.length) {
-        todayCard.appendChild(el("p", "empty-note", "No classes today — enjoy the day off."));
+        var emptyCard = el("div", "card");
+        emptyCard.appendChild(el("p", "empty-note", "No classes today — enjoy the day off."));
+        todaySec.appendChild(emptyCard);
       } else {
-        todays.forEach(function (e, i) {
-          var r = el("div", "status-row");
-          r.style.borderBottom = i < todays.length - 1 ? "1px solid var(--line)" : "none";
-          r.style.paddingBottom = "8px"; r.style.marginBottom = "8px";
+        var list = el("div", "tile-list");
+        todays.forEach(function (e) {
+          var r = el("div", "status-row today-tile");
           r.innerHTML = '<span class="swatch" style="background:var(--accent)"></span><div><p>' + esc(e.title) +
             '</p><p class="muted">' + fmtTime(e.start) + ' – ' + fmtTime(e.end) + (e.location ? " · " + esc(e.location) : "") + '</p></div>';
-          todayCard.appendChild(r);
+          list.appendChild(r);
         });
+        todaySec.appendChild(list);
       }
-      todaySec.appendChild(todayCard);
     }
   }
 
@@ -691,7 +733,7 @@ export function mountApp(root) {
       emptyCard.appendChild(el("p", "empty-note", "No mutual shares yet. Share your schedule with someone below, and once they share back, they'll show up here."));
       mutualSec.appendChild(emptyCard);
     } else {
-      var list = el("div", "mutual-list");
+      var list = el("div", "tile-list");
       mutualIds.forEach(function (id) {
         var row = el("div", "person-row mutual-tile");
         var avRing = el("div", "avatar-ring");
@@ -828,12 +870,15 @@ export function mountApp(root) {
     left.appendChild(back); left.appendChild(tw);
     h.appendChild(left);
 
+    var right = el("div", "right");
     var toggle = el("div", "modewtoggle", '<button data-mode="day">Day</button><button data-mode="week">Week</button>');
     toggle.querySelector('[data-mode="' + S.compare.mode + '"]').classList.add("active");
     toggle.querySelectorAll("button").forEach(function (b) {
       b.onclick = function () { S.compare.mode = b.dataset.mode; renderCompareHeader(); renderCompareBody(); };
     });
-    h.appendChild(toggle);
+    right.appendChild(toggle);
+    right.appendChild(buildThemeToggle());
+    h.appendChild(right);
   }
 
   function renderCompareLegend() {
