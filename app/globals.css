@@ -503,14 +503,14 @@
   @media (min-width: 900px) {
     body { padding-block: 24px; }
     #shell {
-      max-width: 1160px;
+      max-width: 1320px;
       min-height: calc(100dvh - 48px);
       border-radius: 16px;
       overflow: hidden;
     }
     nav.bottomnav { display: none; }
-    main { flex-direction: row; align-items: flex-start; gap: 28px; padding-bottom: 32px; }
+    main { flex-direction: row; align-items: flex-start; gap: 32px; padding-bottom: 32px; }
     .tabpanel { display: flex !important; flex: 1; min-width: 0; }
-    #tab-schedule { flex: 0 0 380px; }
+    #tab-schedule { flex: 0 0 440px; }
     #tab-friends { flex: 1; min-width: 0; }
   }

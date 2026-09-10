@@ -493,17 +493,20 @@ export function mountApp(root) {
   }
 
   function subscribe() {
+    // Both tabs render unconditionally (not gated on S.activeTab): on mobile the
+    // CSS hides the inactive one, but on desktop both panels show at once, so
+    // both need real content regardless of which tab is "active".
     unsubs.push(Db.collection("accounts").orderBy("displayName").limit(300).onSnapshot(function (snap) {
       S.accounts = snap.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); });
-      if (S.activeTab === "friends") renderFriendsTab();
+      renderFriendsTab();
     }));
     unsubs.push(Db.collection("shares").where("from", "==", S.me.id).onSnapshot(function (snap) {
       S.sharesFrom = new Set(snap.docs.map(function (d) { return d.data().to; }));
-      if (S.activeTab === "friends") renderFriendsTab();
+      renderFriendsTab();
     }));
     unsubs.push(Db.collection("shares").where("to", "==", S.me.id).onSnapshot(function (snap) {
       S.sharesTo = new Set(snap.docs.map(function (d) { return d.data().from; }));
-      if (S.activeTab === "friends") renderFriendsTab();
+      renderFriendsTab();
     }));
     unsubs.push(Db.collection("notifications").where("to", "==", S.me.id).where("dismissed", "==", false).onSnapshot(function (snap) {
       S.notifications = snap.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); })
@@ -512,11 +515,11 @@ export function mountApp(root) {
     }));
     unsubs.push(Db.doc("schedules/" + S.me.id).onSnapshot(function (snap) {
       S.mySchedule = snap.exists ? snap.data() : null;
-      if (S.activeTab === "schedule") renderScheduleTab();
+      renderScheduleTab();
     }));
     unsubs.push(Db.doc("profiles/" + S.me.id).onSnapshot(function (snap) {
       S.profile = snap.exists ? snap.data() : { nicknames: {} };
-      if (S.activeTab === "friends") renderFriendsTab();
+      renderFriendsTab();
     }));
   }
 
@@ -586,7 +589,8 @@ export function mountApp(root) {
     $("#tab-schedule").classList.toggle("active", tab === "schedule");
     $("#tab-friends").classList.toggle("active", tab === "friends");
     renderNav();
-    if (tab === "schedule") renderScheduleTab(); else renderFriendsTab();
+    renderScheduleTab();
+    renderFriendsTab();
   }
 
   // ---------- Notifications ----------
