@@ -7,7 +7,9 @@ const DAY_CODE = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
 const PROMPT =
   "This image is a screenshot of a weekly class schedule or timetable. " +
   "Identify every distinct class session, Monday through Friday only (classes never meet Saturday or Sunday). " +
-  'Reply with ONLY a JSON array (no markdown, no other text) of objects shaped like {"day":"MO"|"TU"|"WE"|"TH"|"FR","start":"HH:MM" (24-hour),"end":"HH:MM" (24-hour),"title":"short course name","location":"just the building code and room number, e.g. \'MC 4020\', never the building\'s full name"}. ' +
+  'Reply with ONLY a JSON array (no markdown, no other text) of objects shaped like {"day":"MO"|"TU"|"WE"|"TH"|"FR","start":"HH:MM" (24-hour),"end":"HH:MM" (24-hour),"title":"short course name","location":"building acronym, plus room number if there is one"}. ' +
+  "For location, never write out the building's full name — only its short acronym/code, followed by the room number when one is given. " +
+  'For example: "MC - Mathematics & Computer 4020" becomes "MC 4020"; "DWE - Douglas Wright Engineering 1502" becomes "DWE 1502"; "SJ1 - Classroom & Library Building" (no room number) becomes just "SJ1"; "STC - Science Teaching Complex" becomes just "STC". ' +
   "If a class meets on multiple days, include one object per day it meets. Estimate end time as 50 minutes after start if unclear.";
 
 export async function POST(request) {
