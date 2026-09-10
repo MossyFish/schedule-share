@@ -57,14 +57,8 @@ var SHELL_HTML = `
       </div>
     </main>
     <nav class="bottomnav" id="bottomnav">
-      <button data-tab="schedule">
-        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 2v4M16 2v4M3 10h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        My Schedule
-      </button>
-      <button data-tab="friends">
-        <svg viewBox="0 0 24 24" fill="none"><circle cx="9.5" cy="8.5" r="3.25" stroke="currentColor" stroke-width="1.8"/><path d="M4 20.5v-1a4 4 0 014-4h3a4 4 0 014 4v1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M15.7 8a2.7 2.7 0 010 5.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M20 20.5v-1a3.7 3.7 0 00-2.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-        Friends
-      </button>
+      <button data-tab="schedule">My Schedule</button>
+      <button data-tab="friends">Friends</button>
     </nav>
   </div>
 
@@ -98,7 +92,8 @@ export function mountApp(root) {
     authError: "",
   };
   var unsubs = [];
-  var compareUnsub = null;
+  var compareUnsubs = [];
+  var MULTI_COLORS = ["cat-blue", "cat-pink", "cat-purple", "cat-green"];
   var authUnsub = null;
 
   // ---------------- Firestore adapter ----------------
@@ -456,7 +451,7 @@ export function mountApp(root) {
   function teardownSession() {
     unsubs.forEach(function (u) { try { u(); } catch (e) {} });
     unsubs = [];
-    if (compareUnsub) { try { compareUnsub(); } catch (e) {} compareUnsub = null; }
+    compareUnsubs.forEach(function (u) { try { u(); } catch (e) {} }); compareUnsubs = [];
     S.profile = null; S.accounts = []; S.sharesFrom = new Set(); S.sharesTo = new Set();
     S.notifications = []; S.mySchedule = null; S.compare = null; S.activeTab = "friends";
     S.authMode = "login";
@@ -625,7 +620,7 @@ export function mountApp(root) {
 
     if (S.mySchedule && S.mySchedule.events && S.mySchedule.events.length) {
       var row = el("div", "status-row");
-      row.innerHTML = '<span class="swatch"></span><div style="flex:1;min-width:0"><p>Schedule loaded <span class="muted">· from ' +
+      row.innerHTML = '<div style="flex:1;min-width:0"><p class="loaded-text">Schedule loaded <span class="muted">· from ' +
         (S.mySchedule.source === "ics" ? "Google Calendar file" : "screenshot") + '</span></p></div>';
       var replaceIcon = el("button", "pencil", '<svg viewBox="0 0 24 24" fill="none"><path d="M17.5 3.5a2.12 2.12 0 013 3L9 18 4 19l1-5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>');
       replaceIcon.title = "Replace schedule";
@@ -754,6 +749,12 @@ export function mountApp(root) {
 
     var mutualSec = $("#sec-mutual");
     mutualSec.innerHTML = '<div class="sec-head"><h3>Mutual shares</h3><span class="count-badge">' + mutualIds.length + "</span></div>";
+    if (mutualIds.length) {
+      var multiBtn = el("button", "btn btn-outline btn-sm", "Compare multiple");
+      multiBtn.style.marginBottom = "10px";
+      multiBtn.onclick = function () { openMultiPicker(mutualIds); };
+      mutualSec.appendChild(multiBtn);
+    }
     if (!mutualIds.length) {
       var emptyCard = el("div", "card");
       emptyCard.appendChild(el("p", "empty-note", "No mutual shares yet. Share your schedule with someone below, and once they share back, they'll show up here."));
@@ -844,6 +845,38 @@ export function mountApp(root) {
       ]);
   }
 
+  function openMultiPicker(mutualIds) {
+    var selected = [];
+    var itemsHtml = mutualIds.map(function (id) {
+      return '<label style="display:flex;align-items:center;gap:10px;padding:8px 0;">' +
+        '<input type="checkbox" data-id="' + id + '" style="width:18px;height:18px;flex-shrink:0;">' +
+        "<span>" + esc(nicknameOf(id)) + "</span></label>";
+    }).join("");
+    openModal(
+      "Compare multiple",
+      '<p class="hint" style="margin:0 0 8px;text-align:left;">Pick up to 3 friends to compare alongside your own schedule.</p><div id="mp-list">' + itemsHtml + "</div>",
+      [
+        { label: "Compare", cls: "btn-primary", onClick: function () {
+            if (!selected.length) { toast("Pick at least one friend."); return; }
+            closeModal();
+            openMultiCompare(selected);
+          } },
+        { label: "Cancel", cls: "btn-ghost", onClick: closeModal },
+      ]
+    );
+    $("#mp-list").querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+      cb.onchange = function () {
+        var id = cb.dataset.id;
+        if (cb.checked) {
+          if (selected.length >= 3) { cb.checked = false; toast("You can compare up to 3 friends at once."); return; }
+          selected.push(id);
+        } else {
+          selected = selected.filter(function (x) { return x !== id; });
+        }
+      };
+    });
+  }
+
   // ---------- Compare view ----------
   function computeAxis(events) {
     var startMin = 7 * 60, endMin = 21 * 60;
@@ -856,32 +889,53 @@ export function mountApp(root) {
   }
 
   function openMySchedule() {
-    S.compare = { targetId: null, mode: "week", schedule: null, solo: true };
+    S.compare = { kind: "solo", targetIds: [], mode: "week" };
     $("#app").style.display = "none";
     $("#compare").style.display = "flex";
     renderCompareHeader();
     renderCompareBody();
   }
 
-  async function openCompare(targetId) {
-    S.compare = { targetId: targetId, mode: "day", schedule: null, solo: false };
+  function openCompare(targetId) {
+    S.compare = { kind: "pair", targetIds: [targetId], mode: "day", schedules: {} };
     $("#app").style.display = "none";
     $("#compare").style.display = "flex";
     renderCompareHeader();
     renderCompareLegend();
+    subscribeCompareTargets();
+  }
+
+  function openMultiCompare(targetIds) {
+    S.compare = { kind: "multi", targetIds: targetIds.slice(0, 3), mode: "day", schedules: {} };
+    $("#app").style.display = "none";
+    $("#compare").style.display = "flex";
+    renderCompareHeader();
+    renderCompareLegend();
+    subscribeCompareTargets();
+  }
+
+  function subscribeCompareTargets() {
+    compareUnsubs.forEach(function (u) { try { u(); } catch (e) {} }); compareUnsubs = [];
     $("#compare-body").innerHTML = '<div class="busy" style="padding:20px;"><span class="spinner"></span><span>Loading schedule…</span></div>';
-    if (compareUnsub) { try { compareUnsub(); } catch (e) {} }
-    compareUnsub = Db.doc("schedules/" + targetId).onSnapshot(function (snap) {
-      S.compare.schedule = snap.exists ? snap.data() : null;
-      renderCompareBody();
+    S.compare.targetIds.forEach(function (id) {
+      compareUnsubs.push(Db.doc("schedules/" + id).onSnapshot(function (snap) {
+        S.compare.schedules[id] = snap.exists ? snap.data() : null;
+        renderCompareBody();
+      }));
     });
   }
 
   function closeCompare() {
-    if (compareUnsub) { try { compareUnsub(); } catch (e) {} compareUnsub = null; }
+    compareUnsubs.forEach(function (u) { try { u(); } catch (e) {} }); compareUnsubs = [];
     S.compare = null;
     $("#compare").style.display = "none";
     $("#app").style.display = "flex";
+  }
+
+  function compareTitle() {
+    if (S.compare.kind === "solo") return "Your Schedule";
+    if (S.compare.kind === "pair") return nicknameOf(S.compare.targetIds[0]);
+    return "Group Compare";
   }
 
   function renderCompareHeader() {
@@ -890,9 +944,9 @@ export function mountApp(root) {
     var left = el("div", "left");
     var back = el("button", "backbtn", '<svg viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
     back.onclick = closeCompare;
-    var tw = S.compare.solo
-      ? el("div", "titlewrap", "<h2>Your Schedule</h2>")
-      : el("div", "titlewrap", "<h2>" + esc(nicknameOf(S.compare.targetId)) + '</h2><p class="sub">vs. you</p>');
+    var tw = S.compare.kind === "pair"
+      ? el("div", "titlewrap", "<h2>" + esc(compareTitle()) + '</h2><p class="sub">vs. you</p>')
+      : el("div", "titlewrap", "<h2>" + esc(compareTitle()) + "</h2>");
     left.appendChild(back); left.appendChild(tw);
     h.appendChild(left);
 
@@ -907,42 +961,53 @@ export function mountApp(root) {
     h.appendChild(right);
   }
 
+  function dotColorFor(cls) {
+    if (cls === "you") return "var(--accent)";
+    if (cls === "them") return "var(--accent2)";
+    return "var(--" + cls + ")"; // e.g. cat-blue -> var(--cat-blue)
+  }
+
+  function buildCompareSeries() {
+    var mine = (S.mySchedule && S.mySchedule.events) || [];
+    if (S.compare.kind === "solo") return [{ events: mine, cls: "you", label: "You" }];
+    if (S.compare.kind === "pair") {
+      var theirs = (S.compare.schedules[S.compare.targetIds[0]] && S.compare.schedules[S.compare.targetIds[0]].events) || [];
+      return [{ events: mine, cls: "you", label: "You" }, { events: theirs, cls: "them", label: nicknameOf(S.compare.targetIds[0]) }];
+    }
+    var out = [{ events: mine, cls: MULTI_COLORS[0], label: "You" }];
+    S.compare.targetIds.forEach(function (id, i) {
+      var evs = (S.compare.schedules[id] && S.compare.schedules[id].events) || [];
+      out.push({ events: evs, cls: MULTI_COLORS[i + 1] || "cat-gray", label: nicknameOf(id) });
+    });
+    return out;
+  }
+
   function renderCompareLegend() {
     var l = $("#legend");
-    if (S.compare.solo) { l.innerHTML = ""; return; }
-    l.innerHTML = '<div class="item"><span class="dot" style="background:var(--accent)"></span>You</div>' +
-      '<div class="item"><span class="dot" style="background:var(--accent2)"></span>' + esc(nicknameOf(S.compare.targetId)) + "</div>";
+    if (S.compare.kind === "solo") { l.innerHTML = ""; return; }
+    var series = buildCompareSeries();
+    l.innerHTML = series.map(function (s) {
+      return '<div class="item"><span class="dot" style="background:' + dotColorFor(s.cls) + '"></span>' + esc(s.label) + "</div>";
+    }).join("");
   }
 
   function renderCompareBody() {
     renderCompareLegend();
     var body = $("#compare-body");
     body.innerHTML = "";
-    var mine = (S.mySchedule && S.mySchedule.events) || [];
-
-    if (S.compare.solo) {
-      if (!mine.length) {
-        body.innerHTML = '<p class="empty-note" style="padding:20px 16px;">You haven\'t uploaded a schedule yet.</p>';
-        return;
-      }
-      var soloAxis = computeAxis(mine);
-      var soloSeries = [{ events: mine, cls: "you" }];
-      if (S.compare.mode === "day") renderDayView(body, soloAxis, soloSeries, new Date().getDay(), true);
-      else renderWeekView(body, soloAxis, soloSeries, true, true);
+    var series = buildCompareSeries();
+    var bySubject = S.compare.kind === "solo";
+    var allEvents = series.reduce(function (acc, s) { return acc.concat(s.events); }, []);
+    if (!allEvents.length) {
+      var msg = S.compare.kind === "solo" ? "You haven't uploaded a schedule yet." : "Nobody in this comparison has uploaded a schedule yet.";
+      body.innerHTML = '<p class="empty-note" style="padding:20px 16px;">' + msg + "</p>";
       return;
     }
-
-    var theirs = (S.compare.schedule && S.compare.schedule.events) || [];
-    if (!mine.length && !theirs.length) {
-      body.innerHTML = '<p class="empty-note" style="padding:20px 16px;">Neither of you has uploaded a schedule yet.</p>';
-      return;
-    }
-    var axis = computeAxis(mine.concat(theirs));
-    var series = [{ events: mine, cls: "you" }, { events: theirs, cls: "them" }];
+    var axis = computeAxis(allEvents);
     if (S.compare.mode === "day") {
-      renderDayView(body, axis, series, new Date().getDay(), false);
+      renderDayView(body, axis, series, new Date().getDay(), bySubject);
     } else {
-      renderWeekView(body, axis, series, false, false);
+      renderWeekView(body, axis, series, bySubject, S.compare.kind === "solo");
     }
   }
 
@@ -973,24 +1038,20 @@ export function mountApp(root) {
     return gl;
   }
 
-  function buildPersonCol(events, day, axis, pxPerMin, cls, mini, bySubject) {
+  function buildPersonCol(events, day, axis, pxPerMin, cls, bySubject) {
     var col = el("div", "personcol " + cls);
     events.filter(function (e) { return e.day === day; }).forEach(function (e) {
       var s = toMin(e.start), en = Math.max(toMin(e.end), s + 15);
       var top = (s - axis.startMin) * pxPerMin;
       var minHeight = 16;
       var height = Math.max((en - s) * pxPerMin, minHeight);
-      var evtClass = bySubject ? ("evt cat-" + subjectCategory(e.title)) : ("evt " + (cls === "you" ? "you" : "them"));
-      if (mini && bySubject) evtClass += " detailed";
-      var showsText = !mini || bySubject;
-      if (showsText) evtClass += " " + (height < 30 ? "evt-xs" : height < 46 ? "evt-sm" : "evt-md");
+      var evtClass = bySubject ? ("evt cat-" + subjectCategory(e.title)) : ("evt " + cls);
+      evtClass += " " + (height < 26 ? "evt-xs" : height < 40 ? "evt-sm" : "evt-md");
       var box = el("div", evtClass);
       box.style.top = top + "px"; box.style.height = height + "px";
-      if (showsText) {
-        box.innerHTML = '<span class="t">' + esc(e.title) + '</span>' +
-          (e.location ? '<span class="l">' + esc(e.location) + "</span>" : "") +
-          '<span class="time">' + fmtTime(e.start) + "–" + fmtTime(e.end) + "</span>";
-      }
+      box.innerHTML = '<span class="t">' + esc(e.title) + '</span>' +
+        (e.location ? '<span class="l">' + esc(e.location) + "</span>" : "") +
+        '<span class="time">' + fmtTime(e.start) + "–" + fmtTime(e.end) + "</span>";
       col.appendChild(box);
     });
     return col;
@@ -1004,7 +1065,7 @@ export function mountApp(root) {
     var planes = el("div", "planecols");
     planes.style.height = ((axis.endMin - axis.startMin) * pxPerMin) + "px";
     planes.appendChild(buildGridlines(axis, pxPerMin));
-    series.forEach(function (s) { planes.appendChild(buildPersonCol(s.events, day, axis, pxPerMin, s.cls, false, bySubject)); });
+    series.forEach(function (s) { planes.appendChild(buildPersonCol(s.events, day, axis, pxPerMin, s.cls, bySubject)); });
     grid.appendChild(planes);
     wrap.appendChild(grid);
     container.appendChild(wrap);
@@ -1026,14 +1087,14 @@ export function mountApp(root) {
     var scroller = el("div", "weekscroll");
     order.forEach(function (day, idx) {
       var date = new Date(monday); date.setDate(monday.getDate() + idx);
-      var card = el("div", "daycard");
+      var card = el("div", "daycard" + (series.length > 2 ? " wide" : ""));
       var isToday = date.toDateString() === today.toDateString();
       var dh = el("div", "dh", '<div class="dow' + (isToday ? " today" : "") + '">' + DOW_SHORT[day] + '</div><div class="dnum">' + date.getDate() + "</div>");
       card.appendChild(dh);
       var miniEl = el("div", "mini" + (series.length > 1 ? " dual" : ""));
       miniEl.style.height = totalH + "px";
       miniEl.appendChild(buildGridlines(axis, pxPerMin));
-      series.forEach(function (s) { miniEl.appendChild(buildPersonCol(s.events, day, axis, pxPerMin, s.cls, true, bySubject)); });
+      series.forEach(function (s) { miniEl.appendChild(buildPersonCol(s.events, day, axis, pxPerMin, s.cls, bySubject)); });
       card.appendChild(miniEl);
       scroller.appendChild(card);
     });
@@ -1065,7 +1126,7 @@ export function mountApp(root) {
   return function cleanup() {
     if (authUnsub) { try { authUnsub(); } catch (e) {} }
     unsubs.forEach(function (u) { try { u(); } catch (e) {} });
-    if (compareUnsub) { try { compareUnsub(); } catch (e) {} }
+    compareUnsubs.forEach(function (u) { try { u(); } catch (e) {} });
     root.innerHTML = "";
   };
 }
