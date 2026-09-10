@@ -5,8 +5,8 @@ const DAY_CODE = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
 
 const PROMPT =
   "This image is a screenshot of a weekly class schedule or timetable. " +
-  "Identify every distinct class session. Reply with ONLY a JSON array (no markdown, no other text) of objects shaped like " +
-  '{"day":"MO"|"TU"|"WE"|"TH"|"FR"|"SA"|"SU","start":"HH:MM" (24-hour),"end":"HH:MM" (24-hour),"title":"short course name","location":"room or building, empty string if unknown"}. ' +
+  "Identify every distinct class session, Monday through Friday only (classes never meet Saturday or Sunday). " +
+  'Reply with ONLY a JSON array (no markdown, no other text) of objects shaped like {"day":"MO"|"TU"|"WE"|"TH"|"FR","start":"HH:MM" (24-hour),"end":"HH:MM" (24-hour),"title":"short course name","location":"room or building, empty string if unknown"}. ' +
   "If a class meets on multiple days, include one object per day it meets. Estimate end time as 50 minutes after start if unclear.";
 
 export async function POST(request) {
@@ -93,7 +93,7 @@ export async function POST(request) {
   const events = parsed
     .map((e) => {
       const day = DAY_CODE[String(e.day || "").toUpperCase()];
-      if (day === undefined) return null;
+      if (day === undefined || day === 0 || day === 6) return null; // no classes on Saturday/Sunday
       const start = /^\d{2}:\d{2}$/.test(e.start) ? e.start : "09:00";
       const end = /^\d{2}:\d{2}$/.test(e.end) ? e.end : start;
       return {

@@ -1,50 +1,64 @@
 # Schedule Share
 
-Sign up with a name and password, upload your class schedule (screenshot or a
-Google Calendar `.ics` export), and compare daily or weekly timetables
-side-by-side with classmates who share back.
+A web app for comparing class schedules with classmates. Sign up with a name
+and password, upload your schedule, and see it side by side with anyone who
+shares back with you.
 
-## Stack
+## How it works
 
-- **Next.js (App Router)** — UI and the `/api/parse-schedule` route.
-- **Firebase Auth** — name+password sign-in (a synthetic email is derived from
-  the name under the hood; Firebase handles password storage/hashing).
-- **Firestore** — accounts, schedules, share edges, notifications, nicknames.
-- **Gemini API** — reads a schedule screenshot into structured class times on
-  the server (`app/api/parse-schedule/route.js`); `.ics` files are parsed
-  entirely client-side, no API call needed.
+The frontend is a single-page Next.js app. Login is Firebase Auth
+(email/password under the hood, using a synthetic email built from your
+name). Accounts, schedules, share relationships, and notifications are all
+stored in Firestore.
 
-## One-time setup
+A schedule can be added two ways:
 
-1. **Create a Firebase project** at https://console.firebase.google.com.
-   - Build → Authentication → get started → enable the **Email/Password** sign-in provider.
-   - Build → Firestore Database → create database (start in production mode; the rules in `firestore.rules` lock it down).
-   - Project settings → General → "Your apps" → add a **Web app** → copy the config values into `.env.local` as `NEXT_PUBLIC_FIREBASE_*`.
-   - Project settings → Service accounts → **Generate new private key** → copy `project_id`, `client_email`, and `private_key` into `.env.local` as `FIREBASE_PROJECT_ID` / `FIREBASE_CLIENT_EMAIL` / `FIREBASE_PRIVATE_KEY` (keep the `\n`s in the key literal, in quotes).
+- Upload a `.ics` file exported from Google Calendar. It's parsed entirely
+  in the browser: only events that repeat weekly or daily are kept (so
+  one-off events like appointments or birthdays are dropped), the title has
+  to look like a course code (e.g. "CS 145"), and everything is limited to
+  Monday through Friday.
+- Upload a screenshot of your schedule. This is sent to a server route
+  (`app/api/parse-schedule/route.js`) that calls the Gemini API to read the
+  image and return the same structured class list.
 
-2. **Gemini API key** — already set in `.env.local` (`GEMINI_API_KEY`). If screenshot parsing ever fails with a model error, check https://ai.google.dev/gemini-api/docs/models for the current free-tier model name and update `GEMINI_MODEL`.
+Reuploading a schedule replaces the old one completely.
 
-3. **Deploy Firestore security rules** (once the Firebase CLI is installed and logged in):
-   ```bash
-   npx firebase-tools login
-   npx firebase-tools use --add   # pick your project
-   npx firebase-tools deploy --only firestore:rules,firestore:indexes
-   ```
+Once two people share their schedules with each other, they show up as a
+mutual share and either can open a comparison: a day view (like Google
+Calendar) with both people's classes side by side, or a full week view.
+Class dots are colored by subject: CS/engineering courses are blue, math is
+purple, humanities and social sciences are pink, sciences are green,
+business/econ is amber, anything unrecognized is gray.
 
-4. **Run locally**:
-   ```bash
-   npm run dev
-   ```
-   Open http://localhost:3000. Until the Firebase env vars above are filled in, the app shows a "Firebase isn't configured yet" message instead of the login screen.
+## Deployment
 
-## Deploying to Vercel
+Hosted on Vercel, connected to this GitHub repo. Pushing to `main` deploys
+automatically. Firebase (Auth + Firestore) and the Gemini API key are
+configured through environment variables in the Vercel project settings.
 
-```bash
-npx vercel login
-npx vercel link
-npx vercel env add NEXT_PUBLIC_FIREBASE_API_KEY production
-# ...repeat for every var in .env.local.example...
-npx vercel --prod
+## Using it
+
+1. Sign up with your name and a password.
+2. Upload your schedule (screenshot or `.ics` file) from the My Schedule tab.
+3. In the Friends tab, share your schedule with classmates who've signed up.
+4. Once someone shares back with you, they appear under Mutual Shares. Tap
+   them to compare schedules.
+
+## Running locally
+
+You'll need your own Firebase project (Authentication with Email/Password
+enabled, and a Firestore database) and a Gemini API key.
+
+1. Copy `.env.local.example` to `.env.local` and fill in the Firebase and
+   Gemini values.
+2. `npm install`
+3. `npm run dev`, then open http://localhost:3000.
+
+To deploy the Firestore security rules in `firestore.rules`:
+
 ```
-
-Environment variables are per-Vercel-project and are **not** read from `.env.local` on deploy — each one has to be added via `vercel env add` (or pasted into the Vercel dashboard's Project Settings → Environment Variables) before the first production deploy.
+npx firebase-tools login
+npx firebase-tools use --add
+npx firebase-tools deploy --only firestore:rules,firestore:indexes
+```

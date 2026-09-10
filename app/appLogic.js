@@ -187,6 +187,20 @@ export function mountApp(root) {
     var t = $("#toast"); t.textContent = msg; t.classList.add("show");
     clearTimeout(toast._t); toast._t = setTimeout(function () { t.classList.remove("show"); }, 2400);
   }
+
+  var SUBJECT_CATEGORY = {
+    CS: "blue", COMP: "blue", CPSC: "blue", CSC: "blue", SE: "blue", ECE: "blue", CE: "blue", IT: "blue",
+    MATH: "purple", STAT: "purple", STATS: "purple", AMATH: "purple", PMATH: "purple", CO: "purple", CALC: "purple",
+    ENGL: "pink", ENG: "pink", HIST: "pink", PHIL: "pink", COMMST: "pink", COMM: "pink", SOC: "pink",
+    PSYCH: "pink", PSY: "pink", ANTH: "pink", ARTS: "pink", FINE: "pink", MUSIC: "pink", LING: "pink", LANG: "pink",
+    PHYS: "green", CHEM: "green", BIO: "green", SCI: "green", KIN: "green", ENVS: "green", GEOG: "green",
+    ECON: "amber", BUS: "amber", ACC: "amber", MSCI: "amber", MGMT: "amber", FIN: "amber",
+  };
+  function subjectColorVar(title) {
+    var m = /^[A-Za-z]+/.exec(String(title || ""));
+    var prefix = m ? m[0].toUpperCase() : "";
+    return "var(--cat-" + (SUBJECT_CATEGORY[prefix] || "gray") + ")";
+  }
   function displayNameOf(id) {
     var a = S.accounts.find(function (x) { return x.id === id; });
     return a ? a.displayName : id;
@@ -268,23 +282,32 @@ export function mountApp(root) {
       var p = hhmm.split(":"); var d = new Date(2000, 0, 1, +p[0], +p[1] + mins);
       return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
     }
+    var WEEKDAYS = [1, 2, 3, 4, 5];
     var out = [];
     events.forEach(function (ev) {
-      if (!ev.DTSTART) return;
+      if (!ev.DTSTART || !ev.RRULE) return; // one-off events (appointments, holidays, etc.) aren't classes
+      var freqMatch = /FREQ=([A-Z]+)/.exec(ev.RRULE);
+      var freq = freqMatch ? freqMatch[1] : null;
+      if (freq !== "WEEKLY" && freq !== "DAILY") return; // only recurring weekly/daily patterns are classes
+      if (!/^[A-Za-z]{2,10}\s*-?\s*\d{2,4}/.test(ev.SUMMARY || "")) return; // must look like a course code (e.g. "CS 145")
+
       var title = ev.SUMMARY || "Class";
       var location = ev.LOCATION || "";
       var start = extractTime(ev.DTSTART);
       var end = ev.DTEND ? extractTime(ev.DTEND) : addMin(start, 50);
       var days = [];
-      if (ev.RRULE && /FREQ=WEEKLY/.test(ev.RRULE)) {
-        var m = /BYDAY=([^;]+)/.exec(ev.RRULE);
-        if (m) days = m[1].split(",").map(function (d) { return BYDAY_TO_NUM[d]; }).filter(function (d) { return d !== undefined; });
+      var byday = /BYDAY=([^;]+)/.exec(ev.RRULE);
+      if (byday) {
+        days = byday[1].split(",").map(function (d) { return BYDAY_TO_NUM[d]; }).filter(function (d) { return d !== undefined; });
+      } else if (freq === "DAILY") {
+        days = WEEKDAYS; // a plain daily repeat on a class calendar means "every weekday", never weekends
       }
       if (!days.length) {
         var d0 = extractDate(ev.DTSTART);
         if (d0) days = [d0.getDay()];
       }
-      days.forEach(function (day) { out.push({ day: day, start: start, end: end, title: title, location: location }); });
+      days.filter(function (d) { return d !== 0 && d !== 6; }) // no classes on Saturday/Sunday
+        .forEach(function (day) { out.push({ day: day, start: start, end: end, title: title, location: location }); });
     });
     return out;
   }
@@ -643,7 +666,7 @@ export function mountApp(root) {
         var list = el("div", "tile-list");
         todays.forEach(function (e) {
           var r = el("div", "status-row today-tile");
-          r.innerHTML = '<span class="swatch" style="background:var(--accent)"></span><div><p>' + esc(e.title) +
+          r.innerHTML = '<span class="swatch" style="background:' + subjectColorVar(e.title) + '"></span><div><p>' + esc(e.title) +
             '</p><p class="muted">' + fmtTime(e.start) + ' – ' + fmtTime(e.end) + (e.location ? " · " + esc(e.location) : "") + '</p></div>';
           list.appendChild(r);
         });
