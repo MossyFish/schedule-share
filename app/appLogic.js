@@ -30,11 +30,11 @@ var SHELL_HTML = `
   <div id="auth">
     <div class="brand">
       <div class="mark">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5" width="18" height="16" rx="3" stroke="white" stroke-width="1.8"/><path d="M3 9.5H21" stroke="white" stroke-width="1.8"/><path d="M8 3V6.5M16 3V6.5" stroke="white" stroke-width="1.8" stroke-linecap="round"/><rect x="6.5" y="12" width="4" height="3.2" rx="0.8" fill="white"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M8 2v4M16 2v4M3 10h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><rect x="7" y="13" width="4.5" height="3.5" rx="1" fill="currentColor"/></svg>
       </div>
       <div class="brand-text">
         <h1>Schedule Share</h1>
-        <p>Compare class schedules with your classmates</p>
+        <p>Easy schedule comparison with friends</p>
       </div>
     </div>
     <div id="auth-body"></div>
@@ -56,11 +56,11 @@ var SHELL_HTML = `
     </main>
     <nav class="bottomnav" id="bottomnav">
       <button data-tab="schedule">
-        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M3 9.5H21" stroke="currentColor" stroke-width="1.8"/><path d="M8 3V6.5M16 3V6.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 2v4M16 2v4M3 10h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         My Schedule
       </button>
       <button data-tab="friends">
-        <svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 20c0-3 2.5-5.5 5.5-5.5s5.5 2.5 5.5 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="17.5" cy="7.5" r="2.5" stroke="currentColor" stroke-width="1.6"/><path d="M14.8 14.8c2.6.4 4.7 2.5 4.7 5.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="9.5" cy="8.5" r="3.25" stroke="currentColor" stroke-width="1.8"/><path d="M4 20.5v-1a4 4 0 014-4h3a4 4 0 014 4v1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M15.7 8a2.7 2.7 0 010 5.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M20 20.5v-1a3.7 3.7 0 00-2.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         Friends
       </button>
     </nav>
@@ -292,7 +292,7 @@ export function mountApp(root) {
     frag.appendChild(tabs);
 
     if (S.authMode === "signup") {
-      var f = el("div", "field", '<label>Your name</label><input id="signup-name" type="text" placeholder="e.g. Jamie Rivera" autocomplete="name">');
+      var f = el("div", "field", '<label>Your name</label><input id="signup-name" type="text" placeholder="e.g. Fei Wang" autocomplete="name">');
       var fp = el("div", "field", '<label>Password</label><input id="signup-pass" type="password" placeholder="At least 6 characters" autocomplete="new-password">');
       frag.appendChild(f);
       frag.appendChild(fp);
@@ -301,9 +301,8 @@ export function mountApp(root) {
       btnS.onclick = doSignup;
       frag.appendChild(btnS);
       frag.appendChild(errS);
-      frag.appendChild(el("p", "hint", "This becomes the name classmates see and search for. There's no password recovery, so pick one you'll remember."));
     } else {
-      var f2 = el("div", "field", '<label>Your name</label><input id="login-name" type="text" placeholder="Type the name you signed up with" autocomplete="name">');
+      var f2 = el("div", "field", '<label>Your name</label><input id="login-name" type="text" placeholder="Your name" autocomplete="name">');
       var f2p = el("div", "field", '<label>Password</label><input id="login-pass" type="password" placeholder="Your password" autocomplete="current-password">');
       frag.appendChild(f2);
       frag.appendChild(f2p);
@@ -312,12 +311,6 @@ export function mountApp(root) {
       btnL.onclick = doLogin;
       frag.appendChild(btnL);
       frag.appendChild(errL);
-
-      var listWrap = el("div", "field", '<label>Or pick your name from existing accounts</label>');
-      var list = el("div", "who-list");
-      listWrap.appendChild(list);
-      frag.appendChild(listWrap);
-      loadAccountPicker(list);
     }
 
     body.innerHTML = "";
@@ -334,26 +327,6 @@ export function mountApp(root) {
     $("#auth").style.display = "flex";
     $("#app").style.display = "none";
     $("#compare").style.display = "none";
-  }
-
-  async function loadAccountPicker(container) {
-    try {
-      var snap = await Db.collection("accounts").orderBy("displayName").limit(50).get();
-      container.innerHTML = "";
-      if (!snap.docs.length) {
-        container.innerHTML = '<p class="hint" style="text-align:left;margin:0;">No one has signed up yet — be the first!</p>';
-        return;
-      }
-      snap.docs.forEach(function (d) {
-        var data = d.data();
-        var b = el("button", "", esc(data.displayName));
-        b.onclick = function () {
-          $("#login-name").value = data.displayName;
-          var pass = $("#login-pass"); if (pass) pass.focus();
-        };
-        container.appendChild(b);
-      });
-    } catch (e) { /* directory listing is a convenience; ignore failures */ }
   }
 
   async function doSignup() {
