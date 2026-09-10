@@ -524,7 +524,7 @@ export function mountApp(root) {
     var right = el("div", "right");
     right.appendChild(buildThemeToggle());
     var bell = el("button", "iconbtn");
-    bell.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M6 9a6 6 0 1112 0c0 4 1.5 5.5 1.5 5.5H4.5S6 13 6 9z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9.5 17.5a2.5 2.5 0 005 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
+    bell.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M6 8a6 6 0 0112 0c0 7 3 9 3 9H3s3-2 3-9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M10.3 21a1.94 1.94 0 003.4 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
     if (S.notifications.length) bell.appendChild(el("span", "dot"));
     bell.onclick = function () { $("#notifs").scrollIntoView({ behavior: "smooth", block: "start" }); };
     right.appendChild(bell);
@@ -627,7 +627,7 @@ export function mountApp(root) {
       var row = el("div", "status-row");
       row.innerHTML = '<span class="swatch"></span><div style="flex:1;min-width:0"><p>Schedule loaded <span class="muted">· from ' +
         (S.mySchedule.source === "ics" ? "Google Calendar file" : "screenshot") + '</span></p></div>';
-      var replaceIcon = el("button", "pencil", '<svg viewBox="0 0 24 24" fill="none"><path d="M4 20l.9-3.6L15.6 5.7a1.5 1.5 0 012.1 0l1.6 1.6a1.5 1.5 0 010 2.1L8.6 20.1 4 20z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>');
+      var replaceIcon = el("button", "pencil", '<svg viewBox="0 0 24 24" fill="none"><path d="M17.5 3.5a2.12 2.12 0 013 3L9 18 4 19l1-5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>');
       replaceIcon.title = "Replace schedule";
       replaceIcon.onclick = openUploadModal;
       row.appendChild(replaceIcon);
@@ -640,7 +640,7 @@ export function mountApp(root) {
     } else {
       var grid = el("div", "upload-grid");
       var t1 = el("div", "upload-tile",
-        '<div class="chip"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M3 15l4.5-4.5 3 3L16 8l5 5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/></svg></div>' +
+        '<div class="chip"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.7"/><circle cx="8.5" cy="9" r="1.3" fill="currentColor" stroke="none"/><path d="M3 15.5l4.5-4.5 3 3L15.5 9l5.5 5.5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/></svg></div>' +
         "<span>Upload screenshot</span><small>Upload screenshot of schedule</small>");
       var t2 = el("div", "upload-tile",
         '<div class="chip"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M4 9.5H20" stroke="currentColor" stroke-width="1.7"/><path d="M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>' +
@@ -767,7 +767,7 @@ export function mountApp(root) {
         avRing.appendChild(av);
         var name = el("div", "name", '<div class="n1">' + esc(nicknameOf(id)) + "</div>" +
           (nicknameOf(id) !== displayNameOf(id) ? '<div class="n2">' + esc(displayNameOf(id)) + "</div>" : ""));
-        var pencil = el("button", "pencil", '<svg viewBox="0 0 24 24" fill="none"><path d="M4 20l.9-3.6L15.6 5.7a1.5 1.5 0 012.1 0l1.6 1.6a1.5 1.5 0 010 2.1L8.6 20.1 4 20z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>');
+        var pencil = el("button", "pencil", '<svg viewBox="0 0 24 24" fill="none"><path d="M17.5 3.5a2.12 2.12 0 013 3L9 18 4 19l1-5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>');
         pencil.onclick = function (ev) { ev.stopPropagation(); openNicknameModal(id); };
         var chev = el("div", "chevron", '<svg viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
         row.appendChild(avRing); row.appendChild(name); row.appendChild(pencil); row.appendChild(chev);
@@ -846,7 +846,7 @@ export function mountApp(root) {
 
   // ---------- Compare view ----------
   function computeAxis(events) {
-    var startMin = 7 * 60, endMin = 22 * 60;
+    var startMin = 7 * 60, endMin = 21 * 60;
     events.forEach(function (e) {
       var s = toMin(e.start), en = toMin(e.end);
       if (s < startMin) startMin = Math.floor(s / 60) * 60;
@@ -982,9 +982,11 @@ export function mountApp(root) {
       var height = Math.max((en - s) * pxPerMin, minHeight);
       var evtClass = bySubject ? ("evt cat-" + subjectCategory(e.title)) : ("evt " + (cls === "you" ? "you" : "them"));
       if (mini && bySubject) evtClass += " detailed";
+      var showsText = !mini || bySubject;
+      if (showsText) evtClass += " " + (height < 30 ? "evt-xs" : height < 46 ? "evt-sm" : "evt-md");
       var box = el("div", evtClass);
       box.style.top = top + "px"; box.style.height = height + "px";
-      if (!mini || bySubject) {
+      if (showsText) {
         box.innerHTML = '<span class="t">' + esc(e.title) + '</span>' +
           (e.location ? '<span class="l">' + esc(e.location) + "</span>" : "") +
           '<span class="time">' + fmtTime(e.start) + "–" + fmtTime(e.end) + "</span>";

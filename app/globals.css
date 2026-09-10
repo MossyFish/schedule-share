@@ -375,7 +375,7 @@
   .personcol { position: relative; flex: 1; min-width: 0; }
   .evt {
     position: absolute; left: 2px; right: 2px; border-radius: 8px;
-    padding: 5px 7px; overflow: hidden; font-size: 0.72rem; line-height: 1.25;
+    padding: 4px 6px; overflow: hidden;
     border-left: 3px solid; box-shadow: var(--shadow);
   }
   .evt.you { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
@@ -387,8 +387,13 @@
   .evt.cat-amber { background: color-mix(in srgb, var(--cat-amber) 22%, var(--surface)); border-color: var(--cat-amber); color: var(--ink); }
   .evt.cat-gray { background: color-mix(in srgb, var(--cat-gray) 22%, var(--surface)); border-color: var(--cat-gray); color: var(--ink); }
   .evt .t { font-weight: 700; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .evt .l { display: block; color: var(--muted); font-size: 0.68rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .evt .time { display: block; font-family: "IBM Plex Mono", monospace; font-size: 0.63rem; color: var(--muted); }
+  .evt .l { display: block; color: var(--muted); font-size: 0.68em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .evt .time { display: block; font-family: "IBM Plex Mono", monospace; font-size: 0.63em; color: var(--muted); }
+  .evt.evt-md { font-size: 0.72rem; padding: 5px 7px; line-height: 1.25; }
+  .evt.evt-sm { font-size: 0.64rem; padding: 4px 6px; line-height: 1.15; }
+  .evt.evt-xs { font-size: 0.56rem; padding: 2px 4px; line-height: 1.05; }
+  .evt.evt-sm .l { display: none; }
+  .evt.evt-xs .l, .evt.evt-xs .time { display: none; }
 
   .weekgrid { display: flex; align-items: flex-start; }
   .week-hourcol-wrap { flex-shrink: 0; padding-top: 40px; }
@@ -404,8 +409,7 @@
   .daycard .mini.dual .personcol.them { left: auto; right: 0; width: 50%; }
   .daycard .evt { font-size: 0; }
   .daycard .evt .t, .daycard .evt .l, .daycard .evt .time { display: none; }
-  .daycard .evt.detailed { font-size: 0.72rem; line-height: 1.25; }
-  .daycard .evt.detailed .t, .daycard .evt.detailed .l, .daycard .evt.detailed .time { display: block; }
+  .daycard .evt.detailed .t { display: block; }
 
   nav.bottomnav {
     position: sticky; bottom: 0; z-index: 5;
