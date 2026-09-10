@@ -90,6 +90,8 @@ export function mountApp(root) {
     compare: null, // {targetId, mode:'day'|'week', schedule:null}
     authMode: "signup",
     authError: "",
+    pickMode: false,
+    pickSelected: [],
   };
   var unsubs = [];
   var compareUnsubs = [];
@@ -206,6 +208,10 @@ export function mountApp(root) {
   function nicknameOf(id) {
     var nick = S.profile && S.profile.nicknames && S.profile.nicknames[id];
     return nick || displayNameOf(id);
+  }
+  function getMutualIds() {
+    return S.accounts.map(function (a) { return a.id; })
+      .filter(function (id) { return id !== S.me.id && S.sharesFrom.has(id) && S.sharesTo.has(id); });
   }
 
   // ---------------- theme ----------------
@@ -518,11 +524,6 @@ export function mountApp(root) {
 
     var right = el("div", "right");
     right.appendChild(buildThemeToggle());
-    var bell = el("button", "iconbtn");
-    bell.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M6 8a6 6 0 0112 0c0 7 3 9 3 9H3s3-2 3-9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M10.3 21a1.94 1.94 0 003.4 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
-    if (S.notifications.length) bell.appendChild(el("span", "dot"));
-    bell.onclick = function () { $("#notifs").scrollIntoView({ behavior: "smooth", block: "start" }); };
-    right.appendChild(bell);
     h.appendChild(right);
   }
 
@@ -581,7 +582,6 @@ export function mountApp(root) {
 
   // ---------- Notifications ----------
   function renderNotifs() {
-    renderHeader();
     var box = $("#notifs");
     box.innerHTML = "";
     S.notifications.forEach(function (n) {
@@ -666,6 +666,7 @@ export function mountApp(root) {
           var r = el("div", "status-row today-tile");
           r.innerHTML = '<span class="swatch" style="background:' + subjectColorVar(e.title) + '"></span><div><p>' + esc(e.title) +
             '</p><p class="muted">' + fmtTime(e.start) + ' – ' + fmtTime(e.end) + (e.location ? " · " + esc(e.location) : "") + '</p></div>';
+          r.onclick = function () { showClassMutuals(e); };
           list.appendChild(r);
         });
         todaySec.appendChild(list);
@@ -744,16 +745,32 @@ export function mountApp(root) {
 
   // ---------- Friends tab ----------
   function renderFriendsTab() {
-    var mutualIds = S.accounts.map(function (a) { return a.id; })
-      .filter(function (id) { return id !== S.me.id && S.sharesFrom.has(id) && S.sharesTo.has(id); });
+    var mutualIds = getMutualIds();
+
+    if (!S.pickMode) S.pickSelected = S.pickSelected.filter(function (id) { return mutualIds.indexOf(id) !== -1; });
 
     var mutualSec = $("#sec-mutual");
     mutualSec.innerHTML = '<div class="sec-head"><h3>Mutual shares</h3><span class="count-badge">' + mutualIds.length + "</span></div>";
     if (mutualIds.length) {
-      var multiBtn = el("button", "btn btn-outline btn-sm", "Compare multiple");
-      multiBtn.style.marginBottom = "10px";
-      multiBtn.onclick = function () { openMultiPicker(mutualIds); };
-      mutualSec.appendChild(multiBtn);
+      var pickRow = el("div", "pick-row");
+      var multiBtn = el("button", "btn btn-outline btn-sm", S.pickMode ? "Cancel" : "Compare multiple");
+      multiBtn.onclick = function () {
+        S.pickMode = !S.pickMode;
+        if (!S.pickMode) S.pickSelected = [];
+        renderFriendsTab();
+      };
+      pickRow.appendChild(multiBtn);
+      if (S.pickMode) {
+        var goBtn = el("button", "btn btn-primary btn-sm", "Compare (" + S.pickSelected.length + ")");
+        goBtn.disabled = !S.pickSelected.length;
+        goBtn.onclick = function () {
+          var picked = S.pickSelected.slice();
+          S.pickMode = false; S.pickSelected = [];
+          openMultiCompare(picked);
+        };
+        pickRow.appendChild(goBtn);
+      }
+      mutualSec.appendChild(pickRow);
     }
     if (!mutualIds.length) {
       var emptyCard = el("div", "card");
@@ -762,17 +779,29 @@ export function mountApp(root) {
     } else {
       var list = el("div", "tile-list");
       mutualIds.forEach(function (id) {
-        var row = el("div", "person-row mutual-tile");
+        var picked = S.pickSelected.indexOf(id) !== -1;
+        var row = el("div", "person-row mutual-tile" + (picked ? " picked" : ""));
         var avRing = el("div", "avatar-ring");
         var av = el("div", "avatar a2", esc(initials(displayNameOf(id))));
         avRing.appendChild(av);
         var name = el("div", "name", '<div class="n1">' + esc(nicknameOf(id)) + "</div>" +
           (nicknameOf(id) !== displayNameOf(id) ? '<div class="n2">' + esc(displayNameOf(id)) + "</div>" : ""));
-        var pencil = el("button", "pencil", '<svg viewBox="0 0 24 24" fill="none"><path d="M17.5 3.5a2.12 2.12 0 013 3L9 18 4 19l1-5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>');
-        pencil.onclick = function (ev) { ev.stopPropagation(); openNicknameModal(id); };
-        var chev = el("div", "chevron", '<svg viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
-        row.appendChild(avRing); row.appendChild(name); row.appendChild(pencil); row.appendChild(chev);
-        row.onclick = function () { openCompare(id); };
+        row.appendChild(avRing); row.appendChild(name);
+        if (S.pickMode) {
+          row.onclick = function () {
+            var i = S.pickSelected.indexOf(id);
+            if (i !== -1) { S.pickSelected.splice(i, 1); }
+            else if (S.pickSelected.length >= 3) { toast("You can compare up to 3 friends at once."); return; }
+            else { S.pickSelected.push(id); }
+            renderFriendsTab();
+          };
+        } else {
+          var pencil = el("button", "pencil", '<svg viewBox="0 0 24 24" fill="none"><path d="M17.5 3.5a2.12 2.12 0 013 3L9 18 4 19l1-5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>');
+          pencil.onclick = function (ev) { ev.stopPropagation(); openNicknameModal(id); };
+          var chev = el("div", "chevron", '<svg viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+          row.appendChild(pencil); row.appendChild(chev);
+          row.onclick = function () { openCompare(id); };
+        }
         list.appendChild(row);
       });
       mutualSec.appendChild(list);
@@ -845,36 +874,33 @@ export function mountApp(root) {
       ]);
   }
 
-  function openMultiPicker(mutualIds) {
-    var selected = [];
-    var itemsHtml = mutualIds.map(function (id) {
-      return '<label style="display:flex;align-items:center;gap:10px;padding:8px 0;">' +
-        '<input type="checkbox" data-id="' + id + '" style="width:18px;height:18px;flex-shrink:0;">' +
-        "<span>" + esc(nicknameOf(id)) + "</span></label>";
-    }).join("");
-    openModal(
-      "Compare multiple",
-      '<p class="hint" style="margin:0 0 8px;text-align:left;">Pick up to 3 friends to compare alongside your own schedule.</p><div id="mp-list">' + itemsHtml + "</div>",
-      [
-        { label: "Compare", cls: "btn-primary", onClick: function () {
-            if (!selected.length) { toast("Pick at least one friend."); return; }
-            closeModal();
-            openMultiCompare(selected);
-          } },
-        { label: "Cancel", cls: "btn-ghost", onClick: closeModal },
-      ]
-    );
-    $("#mp-list").querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
-      cb.onchange = function () {
-        var id = cb.dataset.id;
-        if (cb.checked) {
-          if (selected.length >= 3) { cb.checked = false; toast("You can compare up to 3 friends at once."); return; }
-          selected.push(id);
-        } else {
-          selected = selected.filter(function (x) { return x !== id; });
-        }
-      };
-    });
+  function sameClass(a, b) {
+    var norm = function (s) { return String(s || "").trim().toLowerCase(); };
+    return a.day === b.day && a.start === b.start && a.end === b.end &&
+      norm(a.title) === norm(b.title) && norm(a.location) === norm(b.location);
+  }
+
+  async function showClassMutuals(classEvent) {
+    var mutualIds = getMutualIds();
+    openModal(esc(classEvent.title), '<div class="busy"><span class="spinner"></span><span>Checking your mutual friends…</span></div>', [
+      { label: "Close", cls: "btn-ghost", onClick: closeModal },
+    ]);
+    var matches = [];
+    for (var i = 0; i < mutualIds.length; i++) {
+      var id = mutualIds[i];
+      try {
+        var snap = await Db.doc("schedules/" + id).get();
+        var evs = (snap.exists && snap.data().events) || [];
+        if (evs.some(function (e) { return sameClass(e, classEvent); })) matches.push(id);
+      } catch (e) { /* skip on error */ }
+    }
+    var body = matches.length
+      ? matches.map(function (id) {
+          return '<div class="person-row"><div class="avatar-ring"><div class="avatar a2">' + esc(initials(displayNameOf(id))) +
+            '</div></div><div class="name"><div class="n1">' + esc(nicknameOf(id)) + "</div></div></div>";
+        }).join("")
+      : '<p class="empty-note" style="padding:0;">None of your mutual friends share this class.</p>';
+    openModal(esc(classEvent.title), body, [{ label: "Close", cls: "btn-ghost", onClick: closeModal }]);
   }
 
   // ---------- Compare view ----------
