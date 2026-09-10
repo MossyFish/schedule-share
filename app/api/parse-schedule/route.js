@@ -37,8 +37,13 @@ export async function POST(request) {
   }
 
   const mimeType = file.type || "image/jpeg";
-  const buf = Buffer.from(await file.arrayBuffer());
-  const base64 = buf.toString("base64");
+  let base64;
+  try {
+    const buf = Buffer.from(await file.arrayBuffer());
+    base64 = buf.toString("base64");
+  } catch (e) {
+    return NextResponse.json({ error: "Couldn't read that image file. Try a different one." }, { status: 400 });
+  }
 
   const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -54,7 +59,7 @@ export async function POST(request) {
             parts: [{ text: PROMPT }, { inline_data: { mime_type: mimeType, data: base64 } }],
           },
         ],
-        generationConfig: { responseMimeType: "application/json" },
+        generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 },
       }),
     });
   } catch (e) {
@@ -69,9 +74,15 @@ export async function POST(request) {
     );
   }
 
-  const data = await geminiRes.json();
+  let data;
+  try {
+    data = await geminiRes.json();
+  } catch (e) {
+    return NextResponse.json({ error: "Gemini sent back something unreadable. Please try again." }, { status: 502 });
+  }
   const text =
     data?.candidates?.[0]?.content?.parts?.map((p) => p.text || "").join("") || "";
+  const finishReason = data?.candidates?.[0]?.finishReason;
 
   let parsed;
   try {
@@ -87,7 +98,10 @@ export async function POST(request) {
     }
   }
   if (!Array.isArray(parsed)) {
-    return NextResponse.json({ error: "Couldn't read a schedule from that image." }, { status: 422 });
+    const hint = finishReason === "MAX_TOKENS"
+      ? "That schedule had too many classes to read in one pass. Try cropping the screenshot to fewer days at a time."
+      : "Couldn't read a schedule from that image. Try a clearer or less cluttered screenshot.";
+    return NextResponse.json({ error: hint }, { status: 422 });
   }
 
   const events = parsed

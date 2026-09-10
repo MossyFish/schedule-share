@@ -390,9 +390,11 @@
   .evt .l { display: block; color: var(--muted); font-size: 0.68rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .evt .time { display: block; font-family: "IBM Plex Mono", monospace; font-size: 0.63rem; color: var(--muted); }
 
-  .weekscroll { display: flex; gap: 10px; padding: 12px 16px 40px; overflow-x: auto; scroll-snap-type: x proximity; }
-  .daycard { flex: 0 0 128px; scroll-snap-align: start; }
-  .daycard .dh { display: flex; flex-direction: column; align-items: center; margin-bottom: 6px; }
+  .weekgrid { display: flex; align-items: flex-start; }
+  .week-hourcol-wrap { flex-shrink: 0; padding-top: 40px; }
+  .weekscroll { display: flex; gap: 10px; padding: 12px 16px 40px; overflow-x: auto; scroll-snap-type: x proximity; flex: 1; min-width: 0; }
+  .daycard { flex: 0 0 180px; scroll-snap-align: start; }
+  .daycard .dh { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 34px; margin-bottom: 6px; }
   .daycard .dh .dow { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
   .daycard .dh .dow.today { color: var(--accent); }
   .daycard .dh .dnum { font-size: 0.78rem; color: var(--faint); }
@@ -400,11 +402,10 @@
   .daycard .mini .personcol { position: absolute; top:0; bottom:0; left: 0; width: 100%; }
   .daycard .mini.dual .personcol.you { left: 0; width: 50%; }
   .daycard .mini.dual .personcol.them { left: auto; right: 0; width: 50%; }
-  .daycard .evt { border-radius: 4px; padding: 2px 4px; font-size: 0; border-left-width: 2px; }
+  .daycard .evt { font-size: 0; }
   .daycard .evt .t, .daycard .evt .l, .daycard .evt .time { display: none; }
-  .daycard .evt.detailed { font-size: 0.56rem; line-height: 1.15; }
-  .daycard .evt.detailed .t { display: block; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .daycard .evt.detailed .l, .daycard .evt.detailed .time { display: none; }
+  .daycard .evt.detailed { font-size: 0.72rem; line-height: 1.25; }
+  .daycard .evt.detailed .t, .daycard .evt.detailed .l, .daycard .evt.detailed .time { display: block; }
 
   nav.bottomnav {
     position: sticky; bottom: 0; z-index: 5;

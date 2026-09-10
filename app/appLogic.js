@@ -978,7 +978,7 @@ export function mountApp(root) {
     events.filter(function (e) { return e.day === day; }).forEach(function (e) {
       var s = toMin(e.start), en = Math.max(toMin(e.end), s + 15);
       var top = (s - axis.startMin) * pxPerMin;
-      var minHeight = mini ? (bySubject ? 26 : 6) : 16;
+      var minHeight = 16;
       var height = Math.max((en - s) * pxPerMin, minHeight);
       var evtClass = bySubject ? ("evt cat-" + subjectCategory(e.title)) : ("evt " + (cls === "you" ? "you" : "them"));
       if (mini && bySubject) evtClass += " detailed";
@@ -1009,12 +1009,19 @@ export function mountApp(root) {
   }
 
   function renderWeekView(container, axis, series, bySubject, weekdaysOnly) {
-    var pxPerMin = 0.22;
-    var scroller = el("div", "weekscroll");
+    var pxPerMin = 0.85; // same scale as the day view — full-size, not a thumbnail
+    var totalH = (axis.endMin - axis.startMin) * pxPerMin;
     var today = new Date();
     var mondayOffset = (today.getDay() + 6) % 7;
     var monday = new Date(today); monday.setDate(today.getDate() - mondayOffset);
     var order = weekdaysOnly ? [1, 2, 3, 4, 5] : [1, 2, 3, 4, 5, 6, 0];
+
+    var wrap = el("div", "weekgrid");
+    var hourColWrap = el("div", "week-hourcol-wrap");
+    hourColWrap.appendChild(buildHourLabels(axis, pxPerMin));
+    wrap.appendChild(hourColWrap);
+
+    var scroller = el("div", "weekscroll");
     order.forEach(function (day, idx) {
       var date = new Date(monday); date.setDate(monday.getDate() + idx);
       var card = el("div", "daycard");
@@ -1022,12 +1029,14 @@ export function mountApp(root) {
       var dh = el("div", "dh", '<div class="dow' + (isToday ? " today" : "") + '">' + DOW_SHORT[day] + '</div><div class="dnum">' + date.getDate() + "</div>");
       card.appendChild(dh);
       var miniEl = el("div", "mini" + (series.length > 1 ? " dual" : ""));
-      miniEl.style.height = ((axis.endMin - axis.startMin) * pxPerMin) + "px";
+      miniEl.style.height = totalH + "px";
+      miniEl.appendChild(buildGridlines(axis, pxPerMin));
       series.forEach(function (s) { miniEl.appendChild(buildPersonCol(s.events, day, axis, pxPerMin, s.cls, true, bySubject)); });
       card.appendChild(miniEl);
       scroller.appendChild(card);
     });
-    container.appendChild(scroller);
+    wrap.appendChild(scroller);
+    container.appendChild(wrap);
   }
 
   // ---------- modal ----------
