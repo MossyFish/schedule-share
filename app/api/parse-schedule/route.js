@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { verifyIdToken } from "@/lib/firebaseAdmin";
+import { shortenLocation } from "@/lib/shortenLocation";
 
 const DAY_CODE = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
 
 const PROMPT =
   "This image is a screenshot of a weekly class schedule or timetable. " +
   "Identify every distinct class session, Monday through Friday only (classes never meet Saturday or Sunday). " +
-  'Reply with ONLY a JSON array (no markdown, no other text) of objects shaped like {"day":"MO"|"TU"|"WE"|"TH"|"FR","start":"HH:MM" (24-hour),"end":"HH:MM" (24-hour),"title":"short course name","location":"room or building, empty string if unknown"}. ' +
+  'Reply with ONLY a JSON array (no markdown, no other text) of objects shaped like {"day":"MO"|"TU"|"WE"|"TH"|"FR","start":"HH:MM" (24-hour),"end":"HH:MM" (24-hour),"title":"short course name","location":"just the building code and room number, e.g. \'MC 4020\', never the building\'s full name"}. ' +
   "If a class meets on multiple days, include one object per day it meets. Estimate end time as 50 minutes after start if unclear.";
 
 export async function POST(request) {
@@ -115,7 +116,7 @@ export async function POST(request) {
         start,
         end,
         title: String(e.title || "Class").slice(0, 80),
-        location: String(e.location || "").slice(0, 80),
+        location: shortenLocation(e.location).slice(0, 80),
       };
     })
     .filter(Boolean);

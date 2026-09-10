@@ -223,6 +223,7 @@
   .btn-ghost { background: var(--surface-2); color: var(--ink); }
   .btn-outline { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
   .btn-sm { padding: 8px 12px; font-size: 0.82rem; border-radius: 8px; }
+  .btn-xs { padding: 5px 9px; font-size: 0.72rem; border-radius: 7px; }
   .hint { font-size: 0.82rem; color: var(--muted); text-align: center; }
   #auth .error { font-size: 0.83rem; color: var(--danger); min-height: 1em; }
   #auth .unavailable {
@@ -381,8 +382,9 @@
     transform: translateY(-1px);
     box-shadow: var(--shadow);
   }
-  .pick-row { display: flex; gap: 8px; margin-bottom: 10px; }
-  .pick-row .btn { flex: 0 0 auto; }
+  .sec-head-left { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+  .pick-row { display: flex; gap: 6px; flex-shrink: 0; }
+  .pick-row .btn { flex: 0 0 auto; white-space: nowrap; }
   .avatar-ring {
     padding: 2px; border-radius: 50%; flex-shrink: 0;
     background: linear-gradient(135deg, var(--avatar-blue), var(--accent2));
@@ -411,6 +413,15 @@
   .planecols { position: relative; flex: 1; display: flex; gap: 8px; }
   .gridlines { position: absolute; inset: 0; }
   .gridlines .line { position: absolute; left: 0; right: 0; border-top: 1px solid var(--line); }
+  .now-line { position: absolute; left: 0; right: 0; height: 2px; z-index: 4; pointer-events: none; }
+  .now-line::before {
+    content: ""; position: absolute; left: -1px; top: 50%; transform: translateY(-50%);
+    width: 8px; height: 8px; border-radius: 50%; background: var(--danger);
+  }
+  .now-line::after {
+    content: ""; position: absolute; left: 6px; right: 0; top: 50%; transform: translateY(-50%);
+    height: 2px; background: linear-gradient(90deg, var(--danger) 0%, transparent 85%);
+  }
   .personcol { position: relative; flex: 1; min-width: 0; }
   .evt {
     position: absolute; left: 2px; right: 2px; border-radius: 3px;

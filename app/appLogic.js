@@ -1,4 +1,5 @@
 import { auth, db, firebaseReady, normalize, syntheticEmail } from "@/lib/firebaseClient";
+import { shortenLocation } from "@/lib/shortenLocation";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -95,6 +96,14 @@ export function mountApp(root) {
   };
   var unsubs = [];
   var compareUnsubs = [];
+  var nowLineTimer = null;
+  function startNowLineTimer() {
+    stopNowLineTimer();
+    nowLineTimer = setInterval(function () { if (S.compare) renderCompareBody(); }, 60000);
+  }
+  function stopNowLineTimer() {
+    if (nowLineTimer) { clearInterval(nowLineTimer); nowLineTimer = null; }
+  }
   var MULTI_COLORS = ["cat-blue", "cat-pink", "cat-purple", "cat-green"];
   var authUnsub = null;
 
@@ -296,7 +305,7 @@ export function mountApp(root) {
       if (!/^[A-Za-z]{2,10}\s*-?\s*\d{2,4}/.test(ev.SUMMARY || "")) return; // must look like a course code (e.g. "CS 145")
 
       var title = ev.SUMMARY || "Class";
-      var location = ev.LOCATION || "";
+      var location = shortenLocation(ev.LOCATION || "");
       var start = extractTime(ev.DTSTART);
       var end = ev.DTEND ? extractTime(ev.DTEND) : addMin(start, 50);
       var days = [];
@@ -750,10 +759,12 @@ export function mountApp(root) {
     if (!S.pickMode) S.pickSelected = S.pickSelected.filter(function (id) { return mutualIds.indexOf(id) !== -1; });
 
     var mutualSec = $("#sec-mutual");
-    mutualSec.innerHTML = '<div class="sec-head"><h3>Mutual shares</h3><span class="count-badge">' + mutualIds.length + "</span></div>";
+    mutualSec.innerHTML = "";
+    var head = el("div", "sec-head");
+    head.appendChild(el("div", "sec-head-left", '<h3>Mutual shares</h3><span class="count-badge">' + mutualIds.length + "</span>"));
     if (mutualIds.length) {
       var pickRow = el("div", "pick-row");
-      var multiBtn = el("button", "btn btn-outline btn-sm", S.pickMode ? "Cancel" : "Compare multiple");
+      var multiBtn = el("button", "btn btn-outline btn-xs", S.pickMode ? "Cancel" : "Compare multiple");
       multiBtn.onclick = function () {
         S.pickMode = !S.pickMode;
         if (!S.pickMode) S.pickSelected = [];
@@ -761,7 +772,7 @@ export function mountApp(root) {
       };
       pickRow.appendChild(multiBtn);
       if (S.pickMode) {
-        var goBtn = el("button", "btn btn-primary btn-sm", "Compare (" + S.pickSelected.length + ")");
+        var goBtn = el("button", "btn btn-primary btn-xs", "Compare (" + S.pickSelected.length + ")");
         goBtn.disabled = !S.pickSelected.length;
         goBtn.onclick = function () {
           var picked = S.pickSelected.slice();
@@ -770,8 +781,9 @@ export function mountApp(root) {
         };
         pickRow.appendChild(goBtn);
       }
-      mutualSec.appendChild(pickRow);
+      head.appendChild(pickRow);
     }
+    mutualSec.appendChild(head);
     if (!mutualIds.length) {
       var emptyCard = el("div", "card");
       emptyCard.appendChild(el("p", "empty-note", "No mutual shares yet. Share your schedule with someone below, and once they share back, they'll show up here."));
@@ -920,6 +932,7 @@ export function mountApp(root) {
     $("#compare").style.display = "flex";
     renderCompareHeader();
     renderCompareBody();
+    startNowLineTimer();
   }
 
   function openCompare(targetId) {
@@ -929,6 +942,7 @@ export function mountApp(root) {
     renderCompareHeader();
     renderCompareLegend();
     subscribeCompareTargets();
+    startNowLineTimer();
   }
 
   function openMultiCompare(targetIds) {
@@ -938,6 +952,7 @@ export function mountApp(root) {
     renderCompareHeader();
     renderCompareLegend();
     subscribeCompareTargets();
+    startNowLineTimer();
   }
 
   function subscribeCompareTargets() {
@@ -953,6 +968,7 @@ export function mountApp(root) {
 
   function closeCompare() {
     compareUnsubs.forEach(function (u) { try { u(); } catch (e) {} }); compareUnsubs = [];
+    stopNowLineTimer();
     S.compare = null;
     $("#compare").style.display = "none";
     $("#app").style.display = "flex";
@@ -1083,6 +1099,15 @@ export function mountApp(root) {
     return col;
   }
 
+  function buildNowLine(axis, pxPerMin) {
+    var now = new Date();
+    var mins = now.getHours() * 60 + now.getMinutes();
+    if (mins < axis.startMin || mins > axis.endMin) return null;
+    var line = el("div", "now-line");
+    line.style.top = ((mins - axis.startMin) * pxPerMin) + "px";
+    return line;
+  }
+
   function renderDayView(container, axis, series, day, bySubject) {
     var pxPerMin = 0.85;
     var wrap = el("div", "daywrap");
@@ -1092,6 +1117,10 @@ export function mountApp(root) {
     planes.style.height = ((axis.endMin - axis.startMin) * pxPerMin) + "px";
     planes.appendChild(buildGridlines(axis, pxPerMin));
     series.forEach(function (s) { planes.appendChild(buildPersonCol(s.events, day, axis, pxPerMin, s.cls, bySubject)); });
+    if (day === new Date().getDay()) {
+      var nowLine = buildNowLine(axis, pxPerMin);
+      if (nowLine) planes.appendChild(nowLine);
+    }
     grid.appendChild(planes);
     wrap.appendChild(grid);
     container.appendChild(wrap);
@@ -1153,6 +1182,7 @@ export function mountApp(root) {
     if (authUnsub) { try { authUnsub(); } catch (e) {} }
     unsubs.forEach(function (u) { try { u(); } catch (e) {} });
     compareUnsubs.forEach(function (u) { try { u(); } catch (e) {} });
+    stopNowLineTimer();
     root.innerHTML = "";
   };
 }
