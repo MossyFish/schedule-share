@@ -681,25 +681,29 @@ export function mountApp(root) {
       .filter(function (id) { return id !== S.me.id && S.sharesFrom.has(id) && S.sharesTo.has(id); });
 
     var mutualSec = $("#sec-mutual");
-    mutualSec.innerHTML = '<div class="sec-head"><h3>Mutual shares</h3><span>' + mutualIds.length + "</span></div>";
-    var mCard = el("div", "card");
+    mutualSec.innerHTML = '<div class="sec-head"><h3>Mutual shares</h3><span class="count-badge">' + mutualIds.length + "</span></div>";
     if (!mutualIds.length) {
-      mCard.appendChild(el("p", "empty-note", "No mutual shares yet. Share your schedule with someone below, and once they share back, they'll show up here."));
+      var emptyCard = el("div", "card");
+      emptyCard.appendChild(el("p", "empty-note", "No mutual shares yet. Share your schedule with someone below, and once they share back, they'll show up here."));
+      mutualSec.appendChild(emptyCard);
     } else {
+      var list = el("div", "mutual-list");
       mutualIds.forEach(function (id) {
-        var row = el("div", "person-row mutual-row");
+        var row = el("div", "person-row mutual-tile");
+        var avRing = el("div", "avatar-ring");
         var av = el("div", "avatar a2", esc(initials(displayNameOf(id))));
+        avRing.appendChild(av);
         var name = el("div", "name", '<div class="n1">' + esc(nicknameOf(id)) + "</div>" +
           (nicknameOf(id) !== displayNameOf(id) ? '<div class="n2">' + esc(displayNameOf(id)) + "</div>" : ""));
         var pencil = el("button", "pencil", '<svg viewBox="0 0 24 24" fill="none"><path d="M4 20l.9-3.6L15.6 5.7a1.5 1.5 0 012.1 0l1.6 1.6a1.5 1.5 0 010 2.1L8.6 20.1 4 20z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>');
         pencil.onclick = function (ev) { ev.stopPropagation(); openNicknameModal(id); };
         var chev = el("div", "chevron", '<svg viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
-        row.appendChild(av); row.appendChild(name); row.appendChild(pencil); row.appendChild(chev);
+        row.appendChild(avRing); row.appendChild(name); row.appendChild(pencil); row.appendChild(chev);
         row.onclick = function () { openCompare(id); };
-        mCard.appendChild(row);
+        list.appendChild(row);
       });
+      mutualSec.appendChild(list);
     }
-    mutualSec.appendChild(mCard);
 
     var dirSec = $("#sec-directory");
     dirSec.innerHTML = '<div class="sec-head"><h3>Share with classmates</h3></div>';
@@ -719,7 +723,7 @@ export function mountApp(root) {
         var name = el("div", "name", '<div class="n1">' + esc(a.displayName) + "</div>");
         row.appendChild(av); row.appendChild(name);
         if (S.sharesFrom.has(a.id)) {
-          var badge = el("button", "btn btn-ghost btn-sm", "Shared ✓");
+          var badge = el("button", "btn btn-shared btn-sm", "Shared ✓");
           badge.onclick = function () { unshareWith(a.id); };
           row.appendChild(badge);
         } else {
