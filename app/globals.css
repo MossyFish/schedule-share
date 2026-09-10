@@ -246,6 +246,7 @@
     font-weight: 800; font-size: 0.85rem; flex-shrink: 0;
   }
   .avatar.a2 { background: var(--accent2-soft); color: var(--accent2); }
+  .avatar.sm { width: 28px; height: 28px; font-size: 0.72rem; }
   .modewtoggle {
     display: flex; background: var(--surface-2); border-radius: 10px; padding: 3px; gap: 2px;
   }
@@ -312,7 +313,7 @@
   .search-row svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--faint); }
 
   .person-row {
-    display: flex; align-items: center; gap: 12px; padding: 10px 4px;
+    display: flex; align-items: center; gap: 10px; padding: 6px 4px;
     border-bottom: 1px solid var(--line);
   }
   .person-row:last-child { border-bottom: none; }
@@ -379,6 +380,12 @@
   }
   .evt.you { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
   .evt.them { background: var(--accent2-soft); border-color: var(--accent2); color: var(--ink); }
+  .evt.cat-blue { background: color-mix(in srgb, var(--cat-blue) 22%, var(--surface)); border-color: var(--cat-blue); color: var(--ink); }
+  .evt.cat-purple { background: color-mix(in srgb, var(--cat-purple) 22%, var(--surface)); border-color: var(--cat-purple); color: var(--ink); }
+  .evt.cat-pink { background: color-mix(in srgb, var(--cat-pink) 22%, var(--surface)); border-color: var(--cat-pink); color: var(--ink); }
+  .evt.cat-green { background: color-mix(in srgb, var(--cat-green) 22%, var(--surface)); border-color: var(--cat-green); color: var(--ink); }
+  .evt.cat-amber { background: color-mix(in srgb, var(--cat-amber) 22%, var(--surface)); border-color: var(--cat-amber); color: var(--ink); }
+  .evt.cat-gray { background: color-mix(in srgb, var(--cat-gray) 22%, var(--surface)); border-color: var(--cat-gray); color: var(--ink); }
   .evt .t { font-weight: 700; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .evt .l { display: block; color: var(--muted); font-size: 0.68rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .evt .time { display: block; font-family: "IBM Plex Mono", monospace; font-size: 0.63rem; color: var(--muted); }
@@ -395,6 +402,9 @@
   .daycard .mini.dual .personcol.them { left: auto; right: 0; width: 50%; }
   .daycard .evt { border-radius: 4px; padding: 2px 4px; font-size: 0; border-left-width: 2px; }
   .daycard .evt .t, .daycard .evt .l, .daycard .evt .time { display: none; }
+  .daycard .evt.detailed { font-size: 0.56rem; line-height: 1.15; }
+  .daycard .evt.detailed .t { display: block; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .daycard .evt.detailed .l, .daycard .evt.detailed .time { display: none; }
 
   nav.bottomnav {
     position: sticky; bottom: 0; z-index: 5;

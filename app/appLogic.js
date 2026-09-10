@@ -194,12 +194,15 @@ export function mountApp(root) {
     ENGL: "pink", ENG: "pink", HIST: "pink", PHIL: "pink", COMMST: "pink", COMM: "pink", SOC: "pink",
     PSYCH: "pink", PSY: "pink", ANTH: "pink", ARTS: "pink", FINE: "pink", MUSIC: "pink", LING: "pink", LANG: "pink",
     PHYS: "green", CHEM: "green", BIO: "green", SCI: "green", KIN: "green", ENVS: "green", GEOG: "green",
-    ECON: "amber", BUS: "amber", ACC: "amber", MSCI: "amber", MGMT: "amber", FIN: "amber",
+    ECON: "green", BUS: "green", ACC: "green", MSCI: "green", MGMT: "green", FIN: "green",
   };
-  function subjectColorVar(title) {
+  function subjectCategory(title) {
     var m = /^[A-Za-z]+/.exec(String(title || ""));
     var prefix = m ? m[0].toUpperCase() : "";
-    return "var(--cat-" + (SUBJECT_CATEGORY[prefix] || "gray") + ")";
+    return SUBJECT_CATEGORY[prefix] || "gray";
+  }
+  function subjectColorVar(title) {
+    return "var(--cat-" + subjectCategory(title) + ")";
   }
   function displayNameOf(id) {
     var a = S.accounts.find(function (x) { return x.id === id; });
@@ -622,7 +625,7 @@ export function mountApp(root) {
 
     if (S.mySchedule && S.mySchedule.events && S.mySchedule.events.length) {
       var row = el("div", "status-row");
-      row.innerHTML = '<span class="swatch"></span><div style="flex:1;min-width:0"><p>' + S.mySchedule.events.length + ' classes loaded <span class="muted">· from ' +
+      row.innerHTML = '<span class="swatch"></span><div style="flex:1;min-width:0"><p>Schedule loaded <span class="muted">· from ' +
         (S.mySchedule.source === "ics" ? "Google Calendar file" : "screenshot") + '</span></p></div>';
       var replaceIcon = el("button", "pencil", '<svg viewBox="0 0 24 24" fill="none"><path d="M4 20l.9-3.6L15.6 5.7a1.5 1.5 0 012.1 0l1.6 1.6a1.5 1.5 0 010 2.1L8.6 20.1 4 20z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>');
       replaceIcon.title = "Replace schedule";
@@ -775,7 +778,7 @@ export function mountApp(root) {
     }
 
     var dirSec = $("#sec-directory");
-    dirSec.innerHTML = '<div class="sec-head"><h3>Share with classmates</h3></div>';
+    dirSec.innerHTML = '<div class="sec-head"><h3>Share with friends</h3></div>';
     var others = S.accounts.filter(function (a) { return a.id !== S.me.id; });
     var searchRow = el("div", "search-row",
       '<svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.7"/><path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>' +
@@ -783,12 +786,12 @@ export function mountApp(root) {
     dirSec.appendChild(searchRow);
     var dCard = el("div", "card");
     if (!others.length) {
-      dCard.appendChild(el("p", "empty-note", "No other classmates have signed up yet."));
+      dCard.appendChild(el("p", "empty-note", "No other friends have signed up yet."));
     } else {
       others.forEach(function (a) {
         var row = el("div", "person-row");
         row.dataset.name = a.displayName.toLowerCase();
-        var av = el("div", "avatar", esc(initials(a.displayName)));
+        var av = el("div", "avatar sm", esc(initials(a.displayName)));
         var name = el("div", "name", '<div class="n1">' + esc(a.displayName) + "</div>");
         row.appendChild(av); row.appendChild(name);
         if (S.sharesFrom.has(a.id)) {
@@ -924,8 +927,8 @@ export function mountApp(root) {
       }
       var soloAxis = computeAxis(mine);
       var soloSeries = [{ events: mine, cls: "you" }];
-      if (S.compare.mode === "day") renderDayView(body, soloAxis, soloSeries, new Date().getDay());
-      else renderWeekView(body, soloAxis, soloSeries);
+      if (S.compare.mode === "day") renderDayView(body, soloAxis, soloSeries, new Date().getDay(), true);
+      else renderWeekView(body, soloAxis, soloSeries, true, true);
       return;
     }
 
@@ -937,9 +940,9 @@ export function mountApp(root) {
     var axis = computeAxis(mine.concat(theirs));
     var series = [{ events: mine, cls: "you" }, { events: theirs, cls: "them" }];
     if (S.compare.mode === "day") {
-      renderDayView(body, axis, series, new Date().getDay());
+      renderDayView(body, axis, series, new Date().getDay(), false);
     } else {
-      renderWeekView(body, axis, series);
+      renderWeekView(body, axis, series, false, false);
     }
   }
 
@@ -970,15 +973,18 @@ export function mountApp(root) {
     return gl;
   }
 
-  function buildPersonCol(events, day, axis, pxPerMin, cls, mini) {
+  function buildPersonCol(events, day, axis, pxPerMin, cls, mini, bySubject) {
     var col = el("div", "personcol " + cls);
     events.filter(function (e) { return e.day === day; }).forEach(function (e) {
       var s = toMin(e.start), en = Math.max(toMin(e.end), s + 15);
       var top = (s - axis.startMin) * pxPerMin;
-      var height = Math.max((en - s) * pxPerMin, mini ? 6 : 16);
-      var box = el("div", "evt " + (cls === "you" ? "you" : "them"));
+      var minHeight = mini ? (bySubject ? 26 : 6) : 16;
+      var height = Math.max((en - s) * pxPerMin, minHeight);
+      var evtClass = bySubject ? ("evt cat-" + subjectCategory(e.title)) : ("evt " + (cls === "you" ? "you" : "them"));
+      if (mini && bySubject) evtClass += " detailed";
+      var box = el("div", evtClass);
       box.style.top = top + "px"; box.style.height = height + "px";
-      if (!mini) {
+      if (!mini || bySubject) {
         box.innerHTML = '<span class="t">' + esc(e.title) + '</span>' +
           (e.location ? '<span class="l">' + esc(e.location) + "</span>" : "") +
           '<span class="time">' + fmtTime(e.start) + "–" + fmtTime(e.end) + "</span>";
@@ -988,7 +994,7 @@ export function mountApp(root) {
     return col;
   }
 
-  function renderDayView(container, axis, series, day) {
+  function renderDayView(container, axis, series, day, bySubject) {
     var pxPerMin = 0.85;
     var wrap = el("div", "daywrap");
     var grid = el("div", "daygrid");
@@ -996,19 +1002,19 @@ export function mountApp(root) {
     var planes = el("div", "planecols");
     planes.style.height = ((axis.endMin - axis.startMin) * pxPerMin) + "px";
     planes.appendChild(buildGridlines(axis, pxPerMin));
-    series.forEach(function (s) { planes.appendChild(buildPersonCol(s.events, day, axis, pxPerMin, s.cls, false)); });
+    series.forEach(function (s) { planes.appendChild(buildPersonCol(s.events, day, axis, pxPerMin, s.cls, false, bySubject)); });
     grid.appendChild(planes);
     wrap.appendChild(grid);
     container.appendChild(wrap);
   }
 
-  function renderWeekView(container, axis, series) {
+  function renderWeekView(container, axis, series, bySubject, weekdaysOnly) {
     var pxPerMin = 0.22;
     var scroller = el("div", "weekscroll");
     var today = new Date();
     var mondayOffset = (today.getDay() + 6) % 7;
     var monday = new Date(today); monday.setDate(today.getDate() - mondayOffset);
-    var order = [1, 2, 3, 4, 5, 6, 0];
+    var order = weekdaysOnly ? [1, 2, 3, 4, 5] : [1, 2, 3, 4, 5, 6, 0];
     order.forEach(function (day, idx) {
       var date = new Date(monday); date.setDate(monday.getDate() + idx);
       var card = el("div", "daycard");
@@ -1017,7 +1023,7 @@ export function mountApp(root) {
       card.appendChild(dh);
       var miniEl = el("div", "mini" + (series.length > 1 ? " dual" : ""));
       miniEl.style.height = ((axis.endMin - axis.startMin) * pxPerMin) + "px";
-      series.forEach(function (s) { miniEl.appendChild(buildPersonCol(s.events, day, axis, pxPerMin, s.cls, true)); });
+      series.forEach(function (s) { miniEl.appendChild(buildPersonCol(s.events, day, axis, pxPerMin, s.cls, true, bySubject)); });
       card.appendChild(miniEl);
       scroller.appendChild(card);
     });
