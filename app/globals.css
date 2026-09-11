@@ -120,6 +120,11 @@
   button { font-family: inherit; }
   ::selection { background: var(--accent-soft); }
 
+  @media (max-width: 899px) {
+    body { height: 100dvh; overflow: hidden; }
+    #shell { height: 100dvh; overflow: hidden; }
+  }
+
   #shell {
     width: 100%;
     max-width: 480px;
