@@ -16,7 +16,6 @@ shares back with you.
 </tr>
 <tr>
 <td><img src="screenshots/compare-day.png" width="260" alt="Day comparison view"></td>
-<td><img src="screenshots/compare-week.png" width="260" alt="Week comparison view"></td>
 <td><img src="screenshots/desktop.png" width="260" alt="Desktop layout"></td>
 </tr>
 </table>
