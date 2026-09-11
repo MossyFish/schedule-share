@@ -1150,9 +1150,19 @@ export function mountApp(root) {
       var size = parseFloat(getComputedStyle(refEl).fontSize);
       var apply = function (px) {
         if (lEl) lEl.style.fontSize = px + "px";
-        if (timeEl) timeEl.style.fontSize = Math.max(px * 0.92, 9) + "px";
+        if (timeEl) timeEl.style.fontSize = Math.max(px * 0.92, 8) + "px";
       };
-      for (var i = 0; i < 40 && size < maxPx; i++) {
+      if (box.scrollHeight > avail) {
+        // already overflowing at the default size (rare, tight tier boundary) — shrink to fit
+        for (var j = 0; j < 40 && size > 6; j++) {
+          size -= 0.5;
+          apply(size);
+          if (box.scrollHeight <= avail) return;
+        }
+        if (lEl) lEl.style.display = "none"; // last resort, matches the evt-sm tier's behavior
+        return;
+      }
+      for (var i = 0; i < 40 && size + 0.5 <= maxPx; i++) {
         var next = size + 0.5;
         apply(next);
         if (box.scrollHeight > avail) { apply(size); break; }
