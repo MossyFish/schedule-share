@@ -1131,6 +1131,33 @@ export function mountApp(root) {
     grid.appendChild(planes);
     wrap.appendChild(grid);
     container.appendChild(wrap);
+    fitEventSubText(planes);
+  }
+
+  // Grows the location/time sub-text in each event box as large as the box's
+  // actual measured height allows, capped at the title's own font size.
+  function fitEventSubText(container) {
+    container.querySelectorAll(".evt").forEach(function (box) {
+      var lEl = box.querySelector(".l");
+      var timeEl = box.querySelector(".time");
+      if (!lEl && !timeEl) return;
+      var titleEl = box.querySelector(".t");
+      var maxPx = titleEl ? parseFloat(getComputedStyle(titleEl).fontSize) : 20;
+      var avail = box.clientHeight;
+      if (!avail) return;
+      var refEl = lEl || timeEl;
+      var size = parseFloat(getComputedStyle(refEl).fontSize);
+      var apply = function (px) {
+        if (lEl) lEl.style.fontSize = px + "px";
+        if (timeEl) timeEl.style.fontSize = Math.max(px * 0.92, 9) + "px";
+      };
+      for (var i = 0; i < 40 && size < maxPx; i++) {
+        var next = size + 0.5;
+        apply(next);
+        if (box.scrollHeight > avail) { apply(size); break; }
+        size = next;
+      }
+    });
   }
 
   function renderWeekView(container, axis, series, bySubject) {
