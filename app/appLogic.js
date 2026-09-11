@@ -521,6 +521,7 @@ export function mountApp(root) {
     // both need real content regardless of which tab is "active".
     unsubs.push(Db.collection("accounts").orderBy("displayName").limit(300).onSnapshot(function (snap) {
       S.accounts = snap.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); });
+      renderHeader();
       renderFriendsTab();
     }));
     unsubs.push(Db.collection("shares").where("from", "==", S.me.id).onSnapshot(function (snap) {
