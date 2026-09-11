@@ -234,7 +234,7 @@ export function mountApp(root) {
       .filter(function (id) { return id !== S.me.id && S.sharesFrom.has(id) && S.sharesTo.has(id); });
   }
 
-  var PROFILE_COLORS = ["blue", "purple", "pink", "green", "amber", "gray"];
+  var PROFILE_COLORS = ["blue", "purple", "pink", "green", "amber", "red"];
   function colorOf(id, fallback) {
     var a = S.accounts.find(function (x) { return x.id === id; });
     return (a && a.color) || fallback;
