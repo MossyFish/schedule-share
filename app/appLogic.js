@@ -934,6 +934,7 @@ export function mountApp(root) {
     S.compare = { kind: "solo", targetIds: [], mode: "week" };
     $("#app").style.display = "none";
     $("#compare").style.display = "flex";
+    root.classList.add("comparing");
     renderCompareHeader();
     renderCompareBody();
     startNowLineTimer();
