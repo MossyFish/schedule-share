@@ -519,4 +519,5 @@
     .tabpanel { display: flex !important; flex: 1; min-width: 0; }
     #tab-schedule { flex: 0 0 440px; }
     #tab-friends { flex: 1; min-width: 0; }
+    #shell.comparing { max-width: none; width: calc(100% - 48px); }
   }

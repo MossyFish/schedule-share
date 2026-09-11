@@ -943,6 +943,7 @@ export function mountApp(root) {
     S.compare = { kind: "pair", targetIds: [targetId], mode: "day", schedules: {} };
     $("#app").style.display = "none";
     $("#compare").style.display = "flex";
+    root.classList.add("comparing");
     renderCompareHeader();
     renderCompareLegend();
     subscribeCompareTargets();
@@ -953,6 +954,7 @@ export function mountApp(root) {
     S.compare = { kind: "multi", targetIds: targetIds.slice(0, 3), mode: "day", schedules: {} };
     $("#app").style.display = "none";
     $("#compare").style.display = "flex";
+    root.classList.add("comparing");
     renderCompareHeader();
     renderCompareLegend();
     subscribeCompareTargets();
@@ -976,6 +978,7 @@ export function mountApp(root) {
     S.compare = null;
     $("#compare").style.display = "none";
     $("#app").style.display = "flex";
+    root.classList.remove("comparing");
   }
 
   function compareTitle() {
