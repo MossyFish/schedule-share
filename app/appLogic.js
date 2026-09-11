@@ -93,6 +93,7 @@ export function mountApp(root) {
     authError: "",
     pickMode: false,
     pickSelected: [],
+    freeNowExpanded: false,
   };
   var unsubs = [];
   var compareUnsubs = [];
@@ -104,6 +105,16 @@ export function mountApp(root) {
   function stopNowLineTimer() {
     if (nowLineTimer) { clearInterval(nowLineTimer); nowLineTimer = null; }
   }
+  var freeNowTimer = null;
+  function startFreeNowTimer() {
+    stopFreeNowTimer();
+    freeNowTimer = setInterval(function () { renderScheduleTab(); }, 60000);
+  }
+  function stopFreeNowTimer() {
+    if (freeNowTimer) { clearInterval(freeNowTimer); freeNowTimer = null; }
+  }
+  var freeNowCache = {}; // id -> { events, fetchedAt }
+  var FREE_NOW_TTL = 30000;
   var MULTI_COLORS = ["cat-blue", "cat-pink", "cat-purple", "cat-green"];
   var authUnsub = null;
 
@@ -521,6 +532,7 @@ export function mountApp(root) {
       S.profile = snap.exists ? snap.data() : { nicknames: {} };
       renderFriendsTab();
     }));
+    startFreeNowTimer();
   }
 
   function renderHeader() {
@@ -667,6 +679,9 @@ export function mountApp(root) {
       var head = el("div", "sec-head");
       head.innerHTML = "<h3>Today</h3><span>" + new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" }) + "</span>";
       todaySec.appendChild(head);
+      var freeNowSlot = el("div", "free-now-slot");
+      todaySec.appendChild(freeNowSlot);
+      renderFreeNowWidget(freeNowSlot);
       var today = new Date().getDay();
       var todays = S.mySchedule.events.filter(function (e) { return e.day === today; }).sort(function (a, b) { return toMin(a.start) - toMin(b.start); });
       if (!todays.length) {
@@ -685,6 +700,70 @@ export function mountApp(root) {
         todaySec.appendChild(list);
       }
     }
+  }
+
+  async function getScheduleCached(id) {
+    var c = freeNowCache[id];
+    if (c && Date.now() - c.fetchedAt < FREE_NOW_TTL) return c.events;
+    try {
+      var snap = await Db.doc("schedules/" + id).get();
+      var events = (snap.exists && snap.data().events) || [];
+      freeNowCache[id] = { events: events, fetchedAt: Date.now() };
+      return events;
+    } catch (e) { return []; }
+  }
+
+  function isFreeNow(events) {
+    var now = new Date();
+    var day = now.getDay();
+    var mins = now.getHours() * 60 + now.getMinutes();
+    return !events.some(function (e) { return e.day === day && toMin(e.start) <= mins && mins < toMin(e.end); });
+  }
+
+  async function renderFreeNowWidget(container) {
+    var mutualIds = getMutualIds();
+    if (!mutualIds.length) { container.innerHTML = ""; return; }
+    var results = await Promise.all(mutualIds.map(function (id) {
+      return getScheduleCached(id).then(function (events) { return { id: id, free: isFreeNow(events) }; });
+    }));
+    if (!container.isConnected) return;
+    var freeIds = results.filter(function (r) { return r.free; }).map(function (r) { return r.id; });
+    paintFreeNowWidget(container, freeIds);
+  }
+
+  function paintFreeNowWidget(container, freeIds) {
+    container.innerHTML = "";
+    if (!freeIds.length) return;
+    var MAX_SHOWN = 6;
+    var wrap = el("div", "free-now");
+    var head = el("div", "free-now-head", freeIds.length + " friend" + (freeIds.length === 1 ? "" : "s") + " free right now");
+    wrap.appendChild(head);
+
+    if (!S.freeNowExpanded) {
+      var row = el("div", "free-now-row");
+      row.style.cursor = "pointer";
+      row.onclick = function () { S.freeNowExpanded = true; paintFreeNowWidget(container, freeIds); };
+      freeIds.slice(0, MAX_SHOWN).forEach(function (id) {
+        var av = el("div", "avatar sm", esc(initials(displayNameOf(id))));
+        av.title = nicknameOf(id);
+        row.appendChild(av);
+      });
+      var extra = freeIds.length - MAX_SHOWN;
+      if (extra > 0) row.appendChild(el("div", "avatar sm free-now-extra", "+" + extra));
+      wrap.appendChild(row);
+    } else {
+      var list = el("div", "free-now-list");
+      freeIds.forEach(function (id) {
+        var r = el("div", "free-now-name");
+        r.innerHTML = '<div class="avatar sm">' + esc(initials(displayNameOf(id))) + '</div><span>' + esc(nicknameOf(id)) + "</span>";
+        list.appendChild(r);
+      });
+      wrap.appendChild(list);
+      var less = el("button", "free-now-toggle", "Show less");
+      less.onclick = function () { S.freeNowExpanded = false; paintFreeNowWidget(container, freeIds); };
+      wrap.appendChild(less);
+    }
+    container.appendChild(wrap);
   }
 
   function ensureHiddenFileInputs() {
@@ -1228,6 +1307,7 @@ export function mountApp(root) {
     unsubs.forEach(function (u) { try { u(); } catch (e) {} });
     compareUnsubs.forEach(function (u) { try { u(); } catch (e) {} });
     stopNowLineTimer();
+    stopFreeNowTimer();
     root.innerHTML = "";
   };
 }
