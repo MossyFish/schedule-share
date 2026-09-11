@@ -439,11 +439,11 @@
   .now-line { position: absolute; left: 0; right: 0; height: 2px; z-index: 4; pointer-events: none; }
   .now-line::before {
     content: ""; position: absolute; left: -4px; top: 50%; transform: translateY(-50%);
-    width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+    width: 8px; height: 8px; border-radius: 50%; background: var(--nowline-c1, var(--accent));
   }
   .now-line::after {
     content: ""; position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
-    height: 2px; background: linear-gradient(90deg, var(--accent), var(--accent2));
+    height: 2px; background: linear-gradient(90deg, var(--nowline-c1, var(--accent)), var(--nowline-c2, var(--accent2)));
   }
   .personcol { position: relative; flex: 1; min-width: 0; }
   .evt {
@@ -522,6 +522,13 @@
   #modal-sheet h3 { margin: 0; font-size: 1rem; }
   #modal-sheet .row { display: flex; gap: 10px; }
   #modal-sheet .row .btn { flex: 1; }
+
+  .color-grid { display: flex; flex-wrap: wrap; gap: 14px; padding: 4px 0; }
+  .color-swatch {
+    width: 44px; height: 44px; border-radius: 50%; border: 3px solid transparent;
+    cursor: pointer; padding: 0; box-shadow: var(--shadow);
+  }
+  .color-swatch.active { border-color: var(--ink); }
 
   @media (prefers-reduced-motion: reduce) {
     .spinner { animation: none; border-top-color: var(--line); }

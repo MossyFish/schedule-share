@@ -234,6 +234,18 @@ export function mountApp(root) {
       .filter(function (id) { return id !== S.me.id && S.sharesFrom.has(id) && S.sharesTo.has(id); });
   }
 
+  var PROFILE_COLORS = ["blue", "purple", "pink", "green", "amber", "gray"];
+  function colorOf(id, fallback) {
+    var a = S.accounts.find(function (x) { return x.id === id; });
+    return (a && a.color) || fallback;
+  }
+  function paintAvatar(node, id, fallback) {
+    var c = colorOf(id, fallback);
+    node.style.background = "var(--cat-" + c + "-soft)";
+    node.style.color = "var(--cat-" + c + ")";
+    return node;
+  }
+
   // ---------------- theme ----------------
   var THEME_KEY = "scheduleShareTheme";
   function effectiveTheme() {
@@ -539,7 +551,7 @@ export function mountApp(root) {
     var h = $("#app-header");
     h.innerHTML = "";
     var left = el("div", "left");
-    var av = el("div", "avatar", esc(initials(S.me.displayName)));
+    var av = paintAvatar(el("div", "avatar", esc(initials(S.me.displayName))), S.me.id, "blue");
     var tw = el("div", "titlewrap", "<h2>Schedule Share</h2><p class=\"sub\">" + esc(S.me.displayName) + "</p>");
     left.appendChild(av); left.appendChild(tw);
     av.style.cursor = "pointer";
@@ -556,11 +568,30 @@ export function mountApp(root) {
       "Signed in as " + esc(S.me.displayName),
       '<p class="hint" style="margin:0;">Your login is remembered on this device.</p>',
       [
+        { label: "Profile color", cls: "btn-outline", onClick: function () { closeModal(); openColorPickerModal(); } },
         { label: "Set password", cls: "btn-outline", onClick: function () { closeModal(); openSetPasswordModal(); } },
         { label: "Log out", cls: "btn-outline", onClick: function () { closeModal(); logout(); } },
         { label: "Close", cls: "btn-ghost", onClick: closeModal },
       ]
     );
+  }
+
+  function openColorPickerModal() {
+    var current = colorOf(S.me.id, "blue");
+    var swatchesHtml = PROFILE_COLORS.map(function (c) {
+      return '<button class="color-swatch' + (c === current ? " active" : "") + '" data-color="' + c +
+        '" style="background:var(--cat-' + c + ')" aria-label="' + c + '"></button>';
+    }).join("");
+    openModal("Choose your profile color", '<div class="color-grid">' + swatchesHtml + "</div>", [
+      { label: "Close", cls: "btn-ghost", onClick: closeModal },
+    ]);
+    $("#modal-sheet").querySelectorAll(".color-swatch").forEach(function (btn) {
+      btn.onclick = async function () {
+        var c = btn.dataset.color;
+        try { await Db.doc("accounts/" + S.me.id).update({ color: c }); } catch (e) {}
+        closeModal();
+      };
+    });
   }
 
   function openSetPasswordModal() {
@@ -744,7 +775,7 @@ export function mountApp(root) {
       row.style.cursor = "pointer";
       row.onclick = function () { S.freeNowExpanded = true; paintFreeNowWidget(container, freeIds); };
       freeIds.slice(0, MAX_SHOWN).forEach(function (id) {
-        var av = el("div", "avatar sm", esc(initials(displayNameOf(id))));
+        var av = paintAvatar(el("div", "avatar sm", esc(initials(displayNameOf(id)))), id, "pink");
         av.title = nicknameOf(id);
         row.appendChild(av);
       });
@@ -755,7 +786,8 @@ export function mountApp(root) {
       var list = el("div", "free-now-list");
       freeIds.forEach(function (id) {
         var r = el("div", "free-now-name");
-        r.innerHTML = '<div class="avatar sm">' + esc(initials(displayNameOf(id))) + '</div><span>' + esc(nicknameOf(id)) + "</span>";
+        var c = colorOf(id, "pink");
+        r.innerHTML = '<div class="avatar sm" style="background:var(--cat-' + c + '-soft);color:var(--cat-' + c + ')">' + esc(initials(displayNameOf(id))) + '</div><span>' + esc(nicknameOf(id)) + "</span>";
         list.appendChild(r);
       });
       wrap.appendChild(list);
@@ -877,7 +909,8 @@ export function mountApp(root) {
         var picked = S.pickSelected.indexOf(id) !== -1;
         var row = el("div", "person-row mutual-tile" + (picked ? " picked" : ""));
         var avRing = el("div", "avatar-ring");
-        var av = el("div", "avatar a2", esc(initials(displayNameOf(id))));
+        avRing.style.background = "linear-gradient(135deg, var(--cat-" + colorOf(S.me.id, "blue") + "), var(--cat-" + colorOf(id, "pink") + "))";
+        var av = paintAvatar(el("div", "avatar a2", esc(initials(displayNameOf(id)))), id, "pink");
         avRing.appendChild(av);
         var name = el("div", "name", '<div class="n1">' + esc(nicknameOf(id)) + "</div>" +
           (nicknameOf(id) !== displayNameOf(id) ? '<div class="n2">' + esc(displayNameOf(id)) + "</div>" : ""));
@@ -916,7 +949,7 @@ export function mountApp(root) {
       others.forEach(function (a) {
         var row = el("div", "person-row");
         row.dataset.name = a.displayName.toLowerCase();
-        var av = el("div", "avatar sm", esc(initials(a.displayName)));
+        var av = paintAvatar(el("div", "avatar sm", esc(initials(a.displayName))), a.id, "pink");
         var name = el("div", "name", '<div class="n1">' + esc(a.displayName) + "</div>");
         row.appendChild(av); row.appendChild(name);
         if (S.sharesFrom.has(a.id)) {
@@ -989,9 +1022,12 @@ export function mountApp(root) {
         if (evs.some(function (e) { return sameClass(e, classEvent); })) matches.push(id);
       } catch (e) { /* skip on error */ }
     }
+    var myColor = colorOf(S.me.id, "blue");
     var body = matches.length
       ? matches.map(function (id) {
-          return '<div class="person-row"><div class="avatar-ring"><div class="avatar a2">' + esc(initials(displayNameOf(id))) +
+          var c = colorOf(id, "pink");
+          return '<div class="person-row"><div class="avatar-ring" style="background:linear-gradient(135deg, var(--cat-' + myColor + '), var(--cat-' + c + '))">' +
+            '<div class="avatar a2" style="background:var(--cat-' + c + '-soft);color:var(--cat-' + c + ')">' + esc(initials(displayNameOf(id))) +
             '</div></div><div class="name"><div class="n1">' + esc(nicknameOf(id)) + "</div></div></div>";
         }).join("")
       : '<p class="empty-note" style="padding:0;">None of your mutual friends share this class.</p>';
@@ -1101,7 +1137,10 @@ export function mountApp(root) {
     if (S.compare.kind === "solo") return [{ events: mine, cls: "you", label: "You" }];
     if (S.compare.kind === "pair") {
       var theirs = (S.compare.schedules[S.compare.targetIds[0]] && S.compare.schedules[S.compare.targetIds[0]].events) || [];
-      return [{ events: mine, cls: "you", label: "You" }, { events: theirs, cls: "them", label: nicknameOf(S.compare.targetIds[0]) }];
+      return [
+        { events: mine, cls: "cat-" + colorOf(S.me.id, "blue"), label: "You" },
+        { events: theirs, cls: "cat-" + colorOf(S.compare.targetIds[0], "pink"), label: nicknameOf(S.compare.targetIds[0]) },
+      ];
     }
     var out = [{ events: mine, cls: MULTI_COLORS[0], label: "You" }];
     S.compare.targetIds.forEach(function (id, i) {
@@ -1192,6 +1231,10 @@ export function mountApp(root) {
     if (mins < axis.startMin || mins > axis.endMin) return null;
     var line = el("div", "now-line");
     line.style.top = ((mins - axis.startMin) * pxPerMin) + "px";
+    if (S.compare && S.compare.kind === "pair") {
+      line.style.setProperty("--nowline-c1", "var(--cat-" + colorOf(S.me.id, "blue") + ")");
+      line.style.setProperty("--nowline-c2", "var(--cat-" + colorOf(S.compare.targetIds[0], "pink") + ")");
+    }
     return line;
   }
 
