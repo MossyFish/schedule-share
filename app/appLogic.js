@@ -1005,8 +1005,9 @@ export function mountApp(root) {
 
   function sameClass(a, b) {
     var norm = function (s) { return String(s || "").trim().toLowerCase(); };
+    var normLoc = function (s) { return norm(shortenLocation(s)); };
     return a.day === b.day && a.start === b.start && a.end === b.end &&
-      norm(a.title) === norm(b.title) && norm(a.location) === norm(b.location);
+      norm(a.title) === norm(b.title) && normLoc(a.location) === normLoc(b.location);
   }
 
   async function showClassMutuals(classEvent) {
