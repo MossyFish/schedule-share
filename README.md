@@ -5,10 +5,6 @@ and password, upload your schedule, and see it side by side with anyone who
 shares back with you.
 
 ## Screenshots
-
-*(Shown with demo accounts and made-up names/schedules.)*
-
-<table>
 <tr>
 <td><img src="screenshots/auth.png" width="260" alt="Sign up / log in screen"></td>
 <td><img src="screenshots/myschedule.png" width="260" alt="My Schedule tab"></td>
@@ -16,9 +12,8 @@ shares back with you.
 </tr>
 <tr>
 <td><img src="screenshots/compare-day.png" width="260" alt="Day comparison view"></td>
-<td><img src="screenshots/desktop.png" width="260" alt="Desktop layout"></td>
+<td><img src="screenshots/desktop.png" alt="Desktop layout"></td>
 </tr>
-</table>
 
 ## How it works
 
