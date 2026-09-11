@@ -5,15 +5,8 @@ and password, upload your schedule, and see it side by side with anyone who
 shares back with you.
 
 ## Screenshots
-<tr>
-<td><img src="screenshots/auth.png" width="260" alt="Sign up / log in screen"></td>
-<td><img src="screenshots/myschedule.png" width="260" alt="My Schedule tab"></td>
-<td><img src="screenshots/friends.png" width="260" alt="Friends tab with a mutual share"></td>
-</tr>
-<tr>
-<td><img src="screenshots/compare-day.png" width="260" alt="Day comparison view"></td>
+<img src="screenshots/auth.png" width="260" alt="Sign up / log in screen"><<img src="screenshots/myschedule.png" width="260" alt="My Schedule tab"><img src="screenshots/friends.png" width="260" alt="Friends tab with a mutual share"><img src="screenshots/compare-day.png" width="260" alt="Day comparison view">
 <td><img src="screenshots/desktop.png" alt="Desktop layout"></td>
-</tr>
 
 ## How it works
 
