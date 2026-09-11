@@ -6,7 +6,7 @@ shares back with you.
 
 ## Screenshots
 
-*(Shown with two demo accounts — Alex Chen and Jordan Lee — using made-up class schedules.)*
+*(Shown with demo accounts and made-up names/schedules.)*
 
 <table>
 <tr>
