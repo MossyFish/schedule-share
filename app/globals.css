@@ -439,7 +439,7 @@
   .now-line { position: absolute; left: 0; right: 0; height: 2px; z-index: 4; pointer-events: none; }
   .now-line::before {
     content: ""; position: absolute; left: -4px; top: 50%; transform: translateY(-50%);
-    width: 8px; height: 8px; border-radius: 50%; background: var(--nowline-c1, var(--accent));
+    width: 8px; height: 8px; border-radius: 50%; background: var(--nowline-c2, var(--accent));
   }
   .now-line::after {
     content: ""; position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
