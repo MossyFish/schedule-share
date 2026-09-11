@@ -4,6 +4,23 @@ A web app for comparing class schedules with classmates. Sign up with a name
 and password, upload your schedule, and see it side by side with anyone who
 shares back with you.
 
+## Screenshots
+
+*(Shown with two demo accounts — Alex Chen and Jordan Lee — using made-up class schedules.)*
+
+<table>
+<tr>
+<td><img src="screenshots/auth.png" width="260" alt="Sign up / log in screen"></td>
+<td><img src="screenshots/myschedule.png" width="260" alt="My Schedule tab"></td>
+<td><img src="screenshots/friends.png" width="260" alt="Friends tab with a mutual share"></td>
+</tr>
+<tr>
+<td><img src="screenshots/compare-day.png" width="260" alt="Day comparison view"></td>
+<td><img src="screenshots/compare-week.png" width="260" alt="Week comparison view"></td>
+<td><img src="screenshots/desktop.png" width="260" alt="Desktop layout"></td>
+</tr>
+</table>
+
 ## How it works
 
 The frontend is a single-page Next.js app. Login is Firebase Auth
