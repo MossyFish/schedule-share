@@ -1053,7 +1053,7 @@ export function mountApp(root) {
     if (S.compare.mode === "day") {
       renderDayView(body, axis, series, new Date().getDay(), bySubject);
     } else {
-      renderWeekView(body, axis, series, bySubject, S.compare.kind === "solo");
+      renderWeekView(body, axis, series, bySubject);
     }
   }
 
@@ -1130,13 +1130,13 @@ export function mountApp(root) {
     container.appendChild(wrap);
   }
 
-  function renderWeekView(container, axis, series, bySubject, weekdaysOnly) {
+  function renderWeekView(container, axis, series, bySubject) {
     var pxPerMin = 0.85; // same scale as the day view — full-size, not a thumbnail
     var totalH = (axis.endMin - axis.startMin) * pxPerMin;
     var today = new Date();
     var mondayOffset = (today.getDay() + 6) % 7;
     var monday = new Date(today); monday.setDate(today.getDate() - mondayOffset);
-    var order = weekdaysOnly ? [1, 2, 3, 4, 5] : [1, 2, 3, 4, 5, 6, 0];
+    var order = [1, 2, 3, 4, 5];
 
     var wrap = el("div", "weekgrid");
     var hourColWrap = el("div", "week-hourcol-wrap");
