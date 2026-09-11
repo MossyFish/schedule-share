@@ -910,7 +910,7 @@ export function mountApp(root) {
         var picked = S.pickSelected.indexOf(id) !== -1;
         var row = el("div", "person-row mutual-tile" + (picked ? " picked" : ""));
         var avRing = el("div", "avatar-ring");
-        avRing.style.background = "linear-gradient(135deg, var(--cat-" + colorOf(S.me.id, "blue") + "), var(--cat-" + colorOf(id, "pink") + "))";
+        avRing.style.background = "linear-gradient(135deg, var(--cat-" + colorOf(id, "pink") + "-soft), var(--cat-" + colorOf(id, "pink") + "))";
         var av = paintAvatar(el("div", "avatar a2", esc(initials(displayNameOf(id)))), id, "pink");
         avRing.appendChild(av);
         var name = el("div", "name", '<div class="n1">' + esc(nicknameOf(id)) + "</div>" +
@@ -1023,11 +1023,10 @@ export function mountApp(root) {
         if (evs.some(function (e) { return sameClass(e, classEvent); })) matches.push(id);
       } catch (e) { /* skip on error */ }
     }
-    var myColor = colorOf(S.me.id, "blue");
     var body = matches.length
       ? matches.map(function (id) {
           var c = colorOf(id, "pink");
-          return '<div class="person-row"><div class="avatar-ring" style="background:linear-gradient(135deg, var(--cat-' + myColor + '), var(--cat-' + c + '))">' +
+          return '<div class="person-row"><div class="avatar-ring" style="background:linear-gradient(135deg, var(--cat-' + c + '-soft), var(--cat-' + c + '))">' +
             '<div class="avatar a2" style="background:var(--cat-' + c + '-soft);color:var(--cat-' + c + ')">' + esc(initials(displayNameOf(id))) +
             '</div></div><div class="name"><div class="n1">' + esc(nicknameOf(id)) + "</div></div></div>";
         }).join("")
@@ -1232,10 +1231,9 @@ export function mountApp(root) {
     if (mins < axis.startMin || mins > axis.endMin) return null;
     var line = el("div", "now-line");
     line.style.top = ((mins - axis.startMin) * pxPerMin) + "px";
-    if (S.compare && S.compare.kind === "pair") {
-      line.style.setProperty("--nowline-c1", "var(--cat-" + colorOf(S.me.id, "blue") + ")");
-      line.style.setProperty("--nowline-c2", "var(--cat-" + colorOf(S.compare.targetIds[0], "pink") + ")");
-    }
+    var myColor = colorOf(S.me.id, "blue");
+    line.style.setProperty("--nowline-c1", "var(--cat-" + myColor + "-soft)");
+    line.style.setProperty("--nowline-c2", "var(--cat-" + myColor + ")");
     return line;
   }
 
