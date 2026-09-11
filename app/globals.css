@@ -364,6 +364,24 @@
   }
 
   .tile-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .free-now {
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: 14px;
+    padding: 12px 14px; margin-bottom: 4px;
+  }
+  .free-now-head { font-size: 0.8rem; font-weight: 700; color: var(--muted); margin-bottom: 10px; }
+  .free-now-row { display: flex; align-items: center; }
+  .free-now-row .avatar { margin-right: -8px; border: 2px solid var(--surface-2); }
+  .free-now-row .avatar:last-child { margin-right: 0; }
+  .free-now-extra {
+    background: var(--surface); color: var(--muted); font-size: 0.66rem; font-weight: 800;
+  }
+  .free-now-list { display: flex; flex-direction: column; gap: 10px; }
+  .free-now-name { display: flex; align-items: center; gap: 10px; font-size: 0.87rem; font-weight: 600; }
+  .free-now-toggle {
+    margin-top: 10px; border: none; background: transparent; color: var(--accent);
+    font-size: 0.8rem; font-weight: 700; padding: 0; cursor: pointer;
+  }
   .person-row.mutual-tile {
     border-bottom: none;
     background: var(--surface-2);
