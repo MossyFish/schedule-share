@@ -18,15 +18,17 @@
     --cat-blue: #6FA0D6;
     --cat-purple: #A98CD1;
     --cat-pink: #D98CB0;
-    --cat-green: #6FB08E;
+    --cat-green: #4EAE83;
     --cat-amber: #D6A25C;
     --cat-gray: #9B9384;
+    --cat-red: #D9776E;
     --cat-blue-soft: #E4EDF6;
     --cat-purple-soft: #EDE7F5;
     --cat-pink-soft: #F7E7EE;
-    --cat-green-soft: #E3F0EA;
+    --cat-green-soft: #DEF3E8;
     --cat-amber-soft: #F5E9D9;
     --cat-gray-soft: #EDEAE4;
+    --cat-red-soft: #F9E3E0;
     --surface-translucent: rgba(255,253,248,0.92);
     --line-accent: #D3E1EF;
     --line-accent2: #EDCEDC;
@@ -53,15 +55,17 @@
       --cat-blue: #8FBFEA;
       --cat-purple: #C3A6EE;
       --cat-pink: #EBAECF;
-      --cat-green: #86C4A3;
+      --cat-green: #6FDBA6;
       --cat-amber: #EBC186;
       --cat-gray: #B7B0A2;
+      --cat-red: #E89890;
       --cat-blue-soft: #253A4D;
       --cat-purple-soft: #362B44;
       --cat-pink-soft: #3D2B36;
-      --cat-green-soft: #22362D;
+      --cat-green-soft: #1D3A2C;
       --cat-amber-soft: #3D3222;
       --cat-gray-soft: #33312C;
+      --cat-red-soft: #402B27;
       --surface-translucent: rgba(43,45,48,0.92);
       --line-accent: #33445A;
       --line-accent2: #4A3540;
@@ -88,15 +92,17 @@
     --cat-blue: #8FBFEA;
     --cat-purple: #C3A6EE;
     --cat-pink: #EBAECF;
-    --cat-green: #86C4A3;
+    --cat-green: #6FDBA6;
     --cat-amber: #EBC186;
     --cat-gray: #B7B0A2;
+    --cat-red: #E89890;
     --cat-blue-soft: #253A4D;
     --cat-purple-soft: #362B44;
     --cat-pink-soft: #3D2B36;
-    --cat-green-soft: #22362D;
+    --cat-green-soft: #1D3A2C;
     --cat-amber-soft: #3D3222;
     --cat-gray-soft: #33312C;
+    --cat-red-soft: #402B27;
     --surface-translucent: rgba(43,45,48,0.92);
     --line-accent: #33445A;
     --line-accent2: #4A3540;
@@ -459,6 +465,7 @@
   .evt.cat-green { background: var(--cat-green-soft); border-color: var(--cat-green); color: var(--ink); }
   .evt.cat-amber { background: var(--cat-amber-soft); border-color: var(--cat-amber); color: var(--ink); }
   .evt.cat-gray { background: var(--cat-gray-soft); border-color: var(--cat-gray); color: var(--ink); }
+  .evt.cat-red { background: var(--cat-red-soft); border-color: var(--cat-red); color: var(--ink); }
   .evt .t { font-weight: 700; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .evt .l { display: block; color: var(--muted); font-size: 0.68em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .evt .time { display: block; font-family: "IBM Plex Mono", monospace; font-size: 0.63em; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
