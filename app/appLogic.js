@@ -721,7 +721,7 @@ export function mountApp(root) {
       var todays = S.mySchedule.events.filter(function (e) { return e.day === today; }).sort(function (a, b) { return toMin(a.start) - toMin(b.start); });
       if (!todays.length) {
         var emptyCard = el("div", "card");
-        emptyCard.appendChild(el("p", "empty-note", "No classes today — enjoy the day off."));
+        emptyCard.appendChild(el("p", "empty-note", "No classes today!"));
         todaySec.appendChild(emptyCard);
       } else {
         var list = el("div", "tile-list");
