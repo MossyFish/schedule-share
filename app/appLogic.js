@@ -195,6 +195,9 @@ export function mountApp(root) {
   }
   function shareDocId(a, b) { return a + "__" + b; }
   function toMin(hhmm) { var p = hhmm.split(":"); return (+p[0]) * 60 + (+p[1]); }
+  function addDays(date, n) { var d = new Date(date); d.setDate(d.getDate() + n); return d; }
+  function sameDate(a, b) { return a.toDateString() === b.toDateString(); }
+  function fmtDateLabel(date) { return date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }); }
   function fmtTime(hhmm) {
     var p = hhmm.split(":"); var h = +p[0]; var m = p[1];
     var ap = h >= 12 ? "pm" : "am"; var h12 = h % 12; if (h12 === 0) h12 = 12;
@@ -1047,7 +1050,7 @@ export function mountApp(root) {
   }
 
   function openMySchedule() {
-    S.compare = { kind: "solo", targetIds: [], mode: "week" };
+    S.compare = { kind: "solo", targetIds: [], mode: "week", viewDate: new Date() };
     $("#app").style.display = "none";
     $("#compare").style.display = "flex";
     root.classList.add("comparing");
@@ -1057,7 +1060,7 @@ export function mountApp(root) {
   }
 
   function openCompare(targetId) {
-    S.compare = { kind: "pair", targetIds: [targetId], mode: "day", schedules: {} };
+    S.compare = { kind: "pair", targetIds: [targetId], mode: "day", schedules: {}, viewDate: new Date() };
     $("#app").style.display = "none";
     $("#compare").style.display = "flex";
     root.classList.add("comparing");
@@ -1068,7 +1071,7 @@ export function mountApp(root) {
   }
 
   function openMultiCompare(targetIds) {
-    S.compare = { kind: "multi", targetIds: targetIds.slice(0, 3), mode: "day", schedules: {} };
+    S.compare = { kind: "multi", targetIds: targetIds.slice(0, 3), mode: "day", schedules: {}, viewDate: new Date() };
     $("#app").style.display = "none";
     $("#compare").style.display = "flex";
     root.classList.add("comparing");
@@ -1174,7 +1177,7 @@ export function mountApp(root) {
     }
     var axis = computeAxis(allEvents);
     if (S.compare.mode === "day") {
-      renderDayView(body, axis, series, new Date().getDay(), bySubject);
+      renderDayView(body, axis, series, S.compare.viewDate, bySubject);
     } else {
       renderWeekView(body, axis, series, bySubject);
     }
@@ -1238,16 +1241,20 @@ export function mountApp(root) {
     return line;
   }
 
-  function renderDayView(container, axis, series, day, bySubject) {
+  function renderDayView(container, axis, series, viewDate, bySubject) {
     var pxPerMin = 0.85;
+    var day = viewDate.getDay();
+    var isToday = sameDate(viewDate, new Date());
     var wrap = el("div", "daywrap");
+    wrap.appendChild(buildDayNav(viewDate, isToday));
+
     var grid = el("div", "daygrid");
     grid.appendChild(buildHourLabels(axis, pxPerMin));
     var planes = el("div", "planecols");
     planes.style.height = ((axis.endMin - axis.startMin) * pxPerMin) + "px";
     planes.appendChild(buildGridlines(axis, pxPerMin));
     series.forEach(function (s) { planes.appendChild(buildPersonCol(s.events, day, axis, pxPerMin, s.cls, bySubject)); });
-    if (day === new Date().getDay()) {
+    if (isToday) {
       var nowLine = buildNowLine(axis, pxPerMin);
       if (nowLine) planes.appendChild(nowLine);
     }
@@ -1255,6 +1262,36 @@ export function mountApp(root) {
     wrap.appendChild(grid);
     container.appendChild(wrap);
     fitEventSubText(planes);
+  }
+
+  function buildDayNav(viewDate, isToday) {
+    var nav = el("div", "daynav");
+    var prevBtn = el("button", "daynav-arrow", '<svg viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+    var nextBtn = el("button", "daynav-arrow", '<svg viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+    prevBtn.onclick = function () { S.compare.viewDate = addDays(S.compare.viewDate, -1); renderCompareBody(); };
+    nextBtn.onclick = function () { S.compare.viewDate = addDays(S.compare.viewDate, 1); renderCompareBody(); };
+    var label = el("button", "daynav-label", fmtDateLabel(viewDate) + (isToday ? " · Today" : ""));
+    label.onclick = openDateJumpModal;
+    nav.appendChild(prevBtn); nav.appendChild(label); nav.appendChild(nextBtn);
+    return nav;
+  }
+
+  function openDateJumpModal() {
+    var iso = new Date(S.compare.viewDate.getTime() - S.compare.viewDate.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    openModal("Jump to a date",
+      '<div class="field"><label>Date</label><input id="datejump-input" type="date" value="' + iso + '"></div>',
+      [
+        { label: "Today", cls: "btn-outline", onClick: function () { S.compare.viewDate = new Date(); closeModal(); renderCompareBody(); } },
+        { label: "Go", cls: "btn-primary", onClick: function () {
+            var v = $("#datejump-input").value;
+            if (!v) { closeModal(); return; }
+            var p = v.split("-");
+            S.compare.viewDate = new Date(+p[0], +p[1] - 1, +p[2]);
+            closeModal();
+            renderCompareBody();
+          } },
+        { label: "Cancel", cls: "btn-ghost", onClick: closeModal },
+      ]);
   }
 
   // Grows the location/time sub-text in each event box as large as the box's
