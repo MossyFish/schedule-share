@@ -3,13 +3,20 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // The public directory of names — readable by anyone (including signed-out
-    // visitors on the login screen) so the "pick your name" list and the
-    // "share with classmates" directory work. Each account may only be
-    // created/edited by the Firebase Auth user who owns that uid.
+    // The account directory — readable by any signed-in user (needed for
+    // search-by-name/ID and the classmates list), but not by signed-out
+    // visitors. Each account may only be created/edited by the Firebase Auth
+    // user who owns that uid.
     match /accounts/{uid} {
-      allow read: if true;
+      allow read: if request.auth != null;
       allow write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Shared app metadata — currently just the 4-digit user ID counter,
+    // incremented in a transaction at signup. Low-stakes, so any signed-in
+    // user may read/update it.
+    match /meta/{id} {
+      allow read, write: if request.auth != null;
     }
 
     // Private per-user settings (nicknames). Never readable by anyone else.

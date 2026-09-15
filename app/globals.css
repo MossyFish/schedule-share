@@ -361,6 +361,7 @@
   .person-row .name { flex: 1; min-width: 0; }
   .person-row .name .n1 { font-size: 0.9rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .person-row .name .n2 { font-size: 0.74rem; color: var(--muted); }
+  .id-badge { font-size: 0.72rem; font-weight: 600; color: var(--muted); }
   .empty-note { color: var(--muted); font-size: 0.85rem; padding: 10px 2px; }
 
   .count-badge {
