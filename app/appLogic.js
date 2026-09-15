@@ -48,26 +48,6 @@ var UNIVERSITIES = [
   "Kwantlen Polytechnic University", "MacEwan University", "Mount Royal University",
   "University of Lethbridge",
 ];
-var UNIVERSITY_SHORT = {
-  "University of Waterloo": "UW",
-  "Western University": "Western",
-  "University of Toronto": "UofT",
-  "York University": "York U",
-  "McMaster University": "McMaster",
-  "Queen's University": "Queen's",
-  "University of Ottawa": "uOttawa",
-  "University of British Columbia": "UBC",
-  "Simon Fraser University": "SFU",
-  "University of Victoria": "UVic",
-  "University of Alberta": "UAlberta",
-  "University of Calgary": "UCalgary",
-  "McGill University": "McGill",
-  "Toronto Metropolitan University": "TMU",
-  "Wilfrid Laurier University": "Laurier",
-};
-function universityShort(name) {
-  return name ? (UNIVERSITY_SHORT[name] || name) : "";
-}
 
 var SHELL_HTML = `
   <!-- AUTH -->
@@ -1059,9 +1039,9 @@ export function mountApp(root) {
         var av = paintAvatar(el("div", "avatar a2", esc(initials(displayNameOf(id)))), id, "pink");
         avRing.appendChild(av);
         var uni = universityOf(id);
-        var name = el("div", "name", '<div class="n1">' + esc(nicknameOf(id)) +
-          (uni ? ' <span class="id-badge">' + esc(universityShort(uni)) + "</span>" : "") + "</div>" +
-          (nicknameOf(id) !== displayNameOf(id) ? '<div class="n2">' + esc(displayNameOf(id)) + "</div>" : ""));
+        var name = el("div", "name", '<div class="n1">' + esc(nicknameOf(id)) + "</div>" +
+          (nicknameOf(id) !== displayNameOf(id) ? '<div class="n2">' + esc(displayNameOf(id)) + "</div>" : "") +
+          (uni ? '<div class="n2">' + esc(uni) + "</div>" : ""));
         row.appendChild(avRing); row.appendChild(name);
         if (S.pickMode) {
           row.onclick = function () {
@@ -1103,7 +1083,7 @@ export function mountApp(root) {
     var av = paintAvatar(el("div", "avatar sm", esc(initials(a.displayName))), a.id, "pink");
     var name = el("div", "name", '<div class="n1">' + esc(a.displayName) +
       (a.userId ? ' <span class="id-badge">#' + esc(a.userId) + "</span>" : "") + "</div>" +
-      (a.university ? '<div class="n2">' + esc(universityShort(a.university)) + "</div>" : ""));
+      (a.university ? '<div class="n2">' + esc(a.university) + "</div>" : ""));
     row.appendChild(av); row.appendChild(name);
     if (S.sharesFrom.has(a.id)) {
       var badge = el("button", "btn btn-shared btn-sm", "Shared ✓");
