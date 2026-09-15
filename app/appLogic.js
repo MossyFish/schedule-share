@@ -593,6 +593,10 @@ export function mountApp(root) {
     unsubs.push(Db.collection("accounts").orderBy("displayName").limit(300).onSnapshot(function (snap) {
       S.accounts = snap.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); });
       renderHeader();
+      // The account list changing is exactly when classmate matches can
+      // change too (a new signup, someone adding their university), so the
+      // TTL-based cache needs invalidating here rather than waiting it out.
+      classmatesCache = { ids: null, fetchedAt: 0 };
       renderFriendsTab();
     }));
     unsubs.push(Db.collection("shares").where("from", "==", S.me.id).onSnapshot(function (snap) {
