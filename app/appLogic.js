@@ -21,6 +21,7 @@ import {
   where,
   orderBy,
   limit,
+  runTransaction,
 } from "firebase/firestore";
 
 var DOW_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -55,6 +56,7 @@ var SHELL_HTML = `
       <div class="tabpanel" id="tab-friends">
         <section id="sec-mutual"></section>
         <section id="sec-directory"></section>
+        <section id="sec-classmates"></section>
       </div>
     </main>
     <nav class="bottomnav" id="bottomnav">
@@ -231,6 +233,10 @@ export function mountApp(root) {
   function nicknameOf(id) {
     var nick = S.profile && S.profile.nicknames && S.profile.nicknames[id];
     return nick || displayNameOf(id);
+  }
+  function userIdOf(id) {
+    var a = S.accounts.find(function (x) { return x.id === id; });
+    return a && a.userId;
   }
   function getMutualIds() {
     return S.accounts.map(function (a) { return a.id; })
@@ -440,7 +446,17 @@ export function mountApp(root) {
     try {
       var cred = await createUserWithEmailAndPassword(auth, syntheticEmail(id), password);
       var uid = cred.user.uid;
-      await setDoc(doc(db, "accounts/" + uid), { displayName: name, createdAt: new Date().toISOString() });
+      await runTransaction(db, async function (tx) {
+        var counterRef = doc(db, "meta/counters");
+        var counterSnap = await tx.get(counterRef);
+        var next = (counterSnap.exists() && counterSnap.data().nextUserId) || 0;
+        tx.set(counterRef, { nextUserId: next + 1 }, { merge: true });
+        tx.set(doc(db, "accounts/" + uid), {
+          displayName: name,
+          userId: String(next).padStart(4, "0"),
+          createdAt: new Date().toISOString(),
+        });
+      });
       await setDoc(doc(db, "profiles/" + uid), { nicknames: {}, createdAt: new Date().toISOString() });
       loginAs(uid, name);
     } catch (e) {
@@ -556,7 +572,9 @@ export function mountApp(root) {
     h.innerHTML = "";
     var left = el("div", "left");
     var av = paintAvatar(el("div", "avatar", esc(initials(S.me.displayName))), S.me.id, "blue");
-    var tw = el("div", "titlewrap", "<h2>Schedule Share</h2><p class=\"sub\">" + esc(S.me.displayName) + "</p>");
+    var myId = userIdOf(S.me.id);
+    var tw = el("div", "titlewrap", "<h2>Schedule Share</h2><p class=\"sub\">" + esc(S.me.displayName) +
+      (myId ? ' <span class="id-badge">#' + esc(myId) + "</span>" : "") + "</p>");
     left.appendChild(av); left.appendChild(tw);
     av.style.cursor = "pointer";
     av.onclick = openAccountMenu;
@@ -940,42 +958,99 @@ export function mountApp(root) {
     }
 
     var dirSec = $("#sec-directory");
-    dirSec.innerHTML = '<div class="sec-head"><h3>Share with friends</h3></div>';
-    var others = S.accounts.filter(function (a) { return a.id !== S.me.id; });
+    dirSec.innerHTML = '<div class="sec-head"><h3>Search for friends</h3></div>';
     var searchRow = el("div", "search-row",
       '<svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.7"/><path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>' +
-      '<input type="text" id="friend-search" placeholder="Search by name">');
+      '<input type="text" id="friend-search" placeholder="Search by name or 4-digit ID">');
     dirSec.appendChild(searchRow);
     var dCard = el("div", "card");
-    if (!others.length) {
-      dCard.appendChild(el("p", "empty-note", "No other friends have signed up yet."));
-    } else {
-      others.forEach(function (a) {
-        var row = el("div", "person-row");
-        row.dataset.name = a.displayName.toLowerCase();
-        var av = paintAvatar(el("div", "avatar sm", esc(initials(a.displayName))), a.id, "pink");
-        var name = el("div", "name", '<div class="n1">' + esc(a.displayName) + "</div>");
-        row.appendChild(av); row.appendChild(name);
-        if (S.sharesFrom.has(a.id)) {
-          var badge = el("button", "btn btn-shared btn-sm", "Shared ✓");
-          badge.onclick = function () { unshareWith(a.id); };
-          row.appendChild(badge);
-        } else {
-          var shareBtn = el("button", "btn btn-primary btn-sm", "Share");
-          shareBtn.onclick = function () { shareWith(a.id); };
-          row.appendChild(shareBtn);
-        }
-        dCard.appendChild(row);
-      });
-    }
+    dCard.appendChild(el("p", "empty-note", "Type a name or ID to find someone. Don't know either? Check Classmates below."));
     dirSec.appendChild(dCard);
 
-    $("#friend-search").addEventListener("input", function (e) {
-      var q = e.target.value.trim().toLowerCase();
-      dCard.querySelectorAll(".person-row").forEach(function (r) {
-        r.style.display = !q || r.dataset.name.indexOf(q) !== -1 ? "flex" : "none";
+    $("#friend-search").addEventListener("input", function (e) { renderSearchResults(dCard, e.target.value); });
+
+    renderClassmatesSection();
+  }
+
+  function buildPersonRow(a) {
+    var row = el("div", "person-row");
+    var av = paintAvatar(el("div", "avatar sm", esc(initials(a.displayName))), a.id, "pink");
+    var name = el("div", "name", '<div class="n1">' + esc(a.displayName) +
+      (a.userId ? ' <span class="id-badge">#' + esc(a.userId) + "</span>" : "") + "</div>");
+    row.appendChild(av); row.appendChild(name);
+    if (S.sharesFrom.has(a.id)) {
+      var badge = el("button", "btn btn-shared btn-sm", "Shared ✓");
+      badge.onclick = function () { unshareWith(a.id); };
+      row.appendChild(badge);
+    } else {
+      var shareBtn = el("button", "btn btn-primary btn-sm", "Share");
+      shareBtn.onclick = function () { shareWith(a.id); };
+      row.appendChild(shareBtn);
+    }
+    return row;
+  }
+
+  function renderSearchResults(dCard, qRaw) {
+    var q = qRaw.trim().toLowerCase();
+    dCard.innerHTML = "";
+    if (!q) {
+      dCard.appendChild(el("p", "empty-note", "Type a name or ID to find someone. Don't know either? Check Classmates below."));
+      return;
+    }
+    var matches = S.accounts.filter(function (a) {
+      if (a.id === S.me.id) return false;
+      var nameMatch = a.displayName.toLowerCase().indexOf(q) !== -1;
+      var idMatch = a.userId && a.userId.indexOf(q) !== -1;
+      return nameMatch || idMatch;
+    }).slice(0, 25);
+    if (!matches.length) {
+      dCard.appendChild(el("p", "empty-note", "No one found. Double-check the name or ID."));
+      return;
+    }
+    matches.forEach(function (a) { dCard.appendChild(buildPersonRow(a)); });
+  }
+
+  var classmatesCache = { ids: null, fetchedAt: 0 };
+  var CLASSMATES_TTL = 30000;
+
+  async function computeClassmateIds() {
+    var mine = (S.mySchedule && S.mySchedule.events) || [];
+    if (!mine.length) return [];
+    if (classmatesCache.ids && Date.now() - classmatesCache.fetchedAt < CLASSMATES_TTL) return classmatesCache.ids;
+    var mutualSet = new Set(getMutualIds());
+    var others = S.accounts.filter(function (a) { return a.id !== S.me.id && !mutualSet.has(a.id); });
+    var results = [];
+    for (var i = 0; i < others.length; i++) {
+      var id = others[i].id;
+      try {
+        var snap = await Db.doc("schedules/" + id).get();
+        var evs = (snap.exists && snap.data().events) || [];
+        if (evs.some(function (e) { return mine.some(function (m) { return sameClass(e, m); }); })) results.push(id);
+      } catch (e) { /* skip on error */ }
+    }
+    classmatesCache = { ids: results, fetchedAt: Date.now() };
+    return results;
+  }
+
+  async function renderClassmatesSection() {
+    var sec = $("#sec-classmates");
+    if (!sec) return;
+    var ids = await computeClassmateIds();
+    if (!sec.isConnected) return;
+    sec.innerHTML = '<div class="sec-head"><h3>Classmates</h3>' +
+      (ids.length ? '<span class="count-badge">' + ids.length + "</span>" : "") + "</div>";
+    var card = el("div", "card");
+    if (!S.mySchedule || !S.mySchedule.events || !S.mySchedule.events.length) {
+      card.appendChild(el("p", "empty-note", "Upload your schedule to see who else on Schedule Share shares a class with you."));
+    } else if (!ids.length) {
+      card.appendChild(el("p", "empty-note", "No classmates found yet — this updates automatically as more people sign up."));
+    } else {
+      ids.forEach(function (id) {
+        var a = S.accounts.find(function (x) { return x.id === id; });
+        if (a) card.appendChild(buildPersonRow(a));
       });
-    });
+    }
+    sec.appendChild(card);
   }
 
   async function shareWith(targetId) {
