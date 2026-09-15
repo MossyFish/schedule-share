@@ -559,6 +559,12 @@ export function mountApp(root) {
     unsubs.push(Db.doc("schedules/" + S.me.id).onSnapshot(function (snap) {
       S.mySchedule = snap.exists ? snap.data() : null;
       renderScheduleTab();
+      // My own schedule changing is exactly when classmate matches can change,
+      // and the classmates section otherwise only refreshes on account/share
+      // updates — without this it can go stale forever if the schedule
+      // listener resolves after the Friends tab already rendered once.
+      classmatesCache = { ids: null, fetchedAt: 0 };
+      renderClassmatesSection();
     }));
     unsubs.push(Db.doc("profiles/" + S.me.id).onSnapshot(function (snap) {
       S.profile = snap.exists ? snap.data() : { nicknames: {} };
