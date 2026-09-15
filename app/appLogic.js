@@ -726,6 +726,12 @@ export function mountApp(root) {
     uploadSec.appendChild(card);
     ensureHiddenFileInputs();
 
+    var officeHoursBtn = el("button", "btn btn-outline btn-sm", "+ Add office hours");
+    officeHoursBtn.style.marginTop = "10px";
+    officeHoursBtn.style.width = "100%";
+    officeHoursBtn.onclick = openAddOfficeHoursModal;
+    uploadSec.appendChild(officeHoursBtn);
+
     var todaySec = $("#sec-today");
     todaySec.innerHTML = "";
     if (S.mySchedule && S.mySchedule.events && S.mySchedule.events.length) {
@@ -839,6 +845,43 @@ export function mountApp(root) {
       { label: ".ics file", cls: "btn-outline", onClick: function () { closeModal(); $("#file-ics").click(); } },
       { label: "Cancel", cls: "btn-ghost", onClick: closeModal },
     ]);
+  }
+
+  var OH_DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  function openAddOfficeHoursModal() {
+    var dayOptions = [1, 2, 3, 4, 5].map(function (d) {
+      return '<option value="' + d + '"' + (d === 1 ? " selected" : "") + ">" + OH_DAY_NAMES[d] + "</option>";
+    }).join("");
+    openModal("Add office hours",
+      '<div class="field"><label>Title</label><input id="oh-title" type="text" value="Office Hours" maxlength="60"></div>' +
+      '<div class="field"><label>Day</label><select id="oh-day">' + dayOptions + "</select></div>" +
+      '<div class="field-row">' +
+        '<div class="field"><label>Start</label><input id="oh-start" type="time" value="10:00"></div>' +
+        '<div class="field"><label>End</label><input id="oh-end" type="time" value="11:00"></div>' +
+      "</div>" +
+      '<div class="field"><label>Location</label><input id="oh-location" type="text" placeholder="Optional" maxlength="80"></div>',
+      [
+        { label: "Add", cls: "btn-primary", onClick: async function () {
+            var title = $("#oh-title").value.trim();
+            var day = Number($("#oh-day").value);
+            var start = $("#oh-start").value;
+            var end = $("#oh-end").value;
+            var location = $("#oh-location").value.trim();
+            if (!title) { toast("Give it a title."); return; }
+            if (!start || !end || toMin(end) <= toMin(start)) { toast("End time must be after start time."); return; }
+            var event = { day: day, start: start, end: end, title: title };
+            if (location) event.location = location;
+            var events = ((S.mySchedule && S.mySchedule.events) || []).concat([event]);
+            var source = (S.mySchedule && S.mySchedule.source) || "manual";
+            try {
+              await Db.doc("schedules/" + S.me.id).set({ events: events, source: source, updatedAt: new Date().toISOString() });
+              toast("Office hours added.");
+              closeModal();
+            } catch (e) { toast("Couldn't save — try again."); }
+          } },
+        { label: "Cancel", cls: "btn-ghost", onClick: closeModal },
+      ]);
   }
 
   async function handleIcs(file) {
@@ -961,10 +1004,10 @@ export function mountApp(root) {
     dirSec.innerHTML = '<div class="sec-head"><h3>Search for friends</h3></div>';
     var searchRow = el("div", "search-row",
       '<svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.7"/><path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>' +
-      '<input type="text" id="friend-search" placeholder="Search by name or 4-digit ID">');
+      '<input type="text" id="friend-search" placeholder="Search by name or User ID">');
     dirSec.appendChild(searchRow);
     var dCard = el("div", "card");
-    dCard.appendChild(el("p", "empty-note", "Type a name or ID to find someone. Don't know either? Check Classmates below."));
+    dCard.appendChild(el("p", "empty-note", "Type a name or User ID to find someone."));
     dirSec.appendChild(dCard);
 
     $("#friend-search").addEventListener("input", function (e) { renderSearchResults(dCard, e.target.value); });
@@ -994,7 +1037,7 @@ export function mountApp(root) {
     var q = qRaw.trim().toLowerCase();
     dCard.innerHTML = "";
     if (!q) {
-      dCard.appendChild(el("p", "empty-note", "Type a name or ID to find someone. Don't know either? Check Classmates below."));
+      dCard.appendChild(el("p", "empty-note", "Type a name or User ID to find someone."));
       return;
     }
     var matches = S.accounts.filter(function (a) {
@@ -1004,7 +1047,7 @@ export function mountApp(root) {
       return nameMatch || idMatch;
     }).slice(0, 25);
     if (!matches.length) {
-      dCard.appendChild(el("p", "empty-note", "No one found. Double-check the name or ID."));
+      dCard.appendChild(el("p", "empty-note", "No one found. Double-check the name or User ID."));
       return;
     }
     matches.forEach(function (a) { dCard.appendChild(buildPersonRow(a)); });
@@ -1017,8 +1060,7 @@ export function mountApp(root) {
     var mine = (S.mySchedule && S.mySchedule.events) || [];
     if (!mine.length) return [];
     if (classmatesCache.ids && Date.now() - classmatesCache.fetchedAt < CLASSMATES_TTL) return classmatesCache.ids;
-    var mutualSet = new Set(getMutualIds());
-    var others = S.accounts.filter(function (a) { return a.id !== S.me.id && !mutualSet.has(a.id); });
+    var others = S.accounts.filter(function (a) { return a.id !== S.me.id; });
     var results = [];
     for (var i = 0; i < others.length; i++) {
       var id = others[i].id;

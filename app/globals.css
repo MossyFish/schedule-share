@@ -203,7 +203,7 @@
   }
   .field { display: flex; flex-direction: column; gap: 6px; }
   .field label { font-size: 0.78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
-  .field input {
+  .field input, .field select {
     border: 1.5px solid var(--line);
     background: var(--surface);
     color: var(--ink);
@@ -213,7 +213,9 @@
     font-family: inherit;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
-  .field input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+  .field input:focus, .field select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+  .field-row { display: flex; gap: 10px; }
+  .field-row .field { flex: 1; min-width: 0; }
   .btn {
     border: none;
     border-radius: 12px;
