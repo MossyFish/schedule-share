@@ -22,10 +22,52 @@ import {
   orderBy,
   limit,
   runTransaction,
+  deleteField,
 } from "firebase/firestore";
 
 var DOW_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 var BYDAY_TO_NUM = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
+
+var UNIVERSITIES = [
+  "University of Waterloo", "Western University", "University of Toronto", "York University",
+  "McMaster University", "Queen's University", "University of Ottawa", "Carleton University",
+  "University of Guelph", "Wilfrid Laurier University", "Toronto Metropolitan University",
+  "McGill University", "Concordia University", "Université de Montréal",
+  "University of British Columbia", "Simon Fraser University", "University of Victoria",
+  "University of Alberta", "University of Calgary", "University of Manitoba",
+  "University of Saskatchewan", "Dalhousie University", "Memorial University of Newfoundland",
+  "University of Windsor", "Brock University", "Trent University", "Lakehead University",
+  "Ontario Tech University", "Laurentian University", "Nipissing University",
+  "University of Winnipeg", "University of Regina", "University of New Brunswick",
+  "Mount Allison University", "Acadia University", "St. Francis Xavier University",
+  "Saint Mary's University", "Cape Breton University", "University of Prince Edward Island",
+  "Athabasca University", "Royal Military College of Canada", "OCAD University",
+  "Université Laval", "Université du Québec à Montréal", "HEC Montréal",
+  "École Polytechnique de Montréal", "Bishop's University", "Thompson Rivers University",
+  "University of Northern British Columbia", "Vancouver Island University",
+  "Kwantlen Polytechnic University", "MacEwan University", "Mount Royal University",
+  "University of Lethbridge",
+];
+var UNIVERSITY_SHORT = {
+  "University of Waterloo": "UW",
+  "Western University": "Western",
+  "University of Toronto": "UofT",
+  "York University": "York U",
+  "McMaster University": "McMaster",
+  "Queen's University": "Queen's",
+  "University of Ottawa": "uOttawa",
+  "University of British Columbia": "UBC",
+  "Simon Fraser University": "SFU",
+  "University of Victoria": "UVic",
+  "University of Alberta": "UAlberta",
+  "University of Calgary": "UCalgary",
+  "McGill University": "McGill",
+  "Toronto Metropolitan University": "TMU",
+  "Wilfrid Laurier University": "Laurier",
+};
+function universityShort(name) {
+  return name ? (UNIVERSITY_SHORT[name] || name) : "";
+}
 
 var SHELL_HTML = `
   <!-- AUTH -->
@@ -238,6 +280,10 @@ export function mountApp(root) {
     var a = S.accounts.find(function (x) { return x.id === id; });
     return a && a.userId;
   }
+  function universityOf(id) {
+    var a = S.accounts.find(function (x) { return x.id === id; });
+    return a && a.university;
+  }
   function getMutualIds() {
     return S.accounts.map(function (a) { return a.id; })
       .filter(function (id) { return id !== S.me.id && S.sharesFrom.has(id) && S.sharesTo.has(id); });
@@ -400,8 +446,11 @@ export function mountApp(root) {
     if (S.authMode === "signup") {
       var f = el("div", "field", '<label>Your name</label><input id="signup-name" type="text" placeholder="e.g. Fei Wang" autocomplete="name">');
       var fp = el("div", "field", '<label>Password</label><input id="signup-pass" type="password" placeholder="At least 6 characters" autocomplete="new-password">');
+      var fu = el("div", "field", '<label>University (optional)</label><input id="signup-university" type="text" list="university-options" placeholder="Start typing your school" autocomplete="off">' +
+        '<datalist id="university-options">' + UNIVERSITIES.map(function (u) { return '<option value="' + esc(u) + '">'; }).join("") + "</datalist>");
       frag.appendChild(f);
       frag.appendChild(fp);
+      frag.appendChild(fu);
       var errS = el("p", "error", esc(S.authError));
       var btnS = el("button", "btn btn-primary", "Create account");
       btnS.onclick = doSignup;
@@ -438,6 +487,7 @@ export function mountApp(root) {
   async function doSignup() {
     var name = $("#signup-name").value.trim();
     var password = $("#signup-pass").value;
+    var university = $("#signup-university") ? $("#signup-university").value.trim() : "";
     S.authError = "";
     if (!name) { S.authError = "Enter your name to continue."; renderAuth(); return; }
     if (password.length < 6) { S.authError = "Password must be at least 6 characters."; renderAuth(); return; }
@@ -451,11 +501,13 @@ export function mountApp(root) {
         var counterSnap = await tx.get(counterRef);
         var next = (counterSnap.exists() && counterSnap.data().nextUserId) || 0;
         tx.set(counterRef, { nextUserId: next + 1 }, { merge: true });
-        tx.set(doc(db, "accounts/" + uid), {
+        var accountData = {
           displayName: name,
           userId: String(next).padStart(4, "0"),
           createdAt: new Date().toISOString(),
-        });
+        };
+        if (university) accountData.university = university;
+        tx.set(doc(db, "accounts/" + uid), accountData);
       });
       await setDoc(doc(db, "profiles/" + uid), { nicknames: {}, createdAt: new Date().toISOString() });
       loginAs(uid, name);
@@ -597,6 +649,7 @@ export function mountApp(root) {
       '<p class="hint" style="margin:0;">Your login is remembered on this device.</p>',
       [
         { label: "Profile color", cls: "btn-outline", onClick: function () { closeModal(); openColorPickerModal(); } },
+        { label: "University", cls: "btn-outline", onClick: function () { closeModal(); openUniversityModal(); } },
         { label: "Set password", cls: "btn-outline", onClick: function () { closeModal(); openSetPasswordModal(); } },
         { label: "Log out", cls: "btn-outline", onClick: function () { closeModal(); logout(); } },
         { label: "Close", cls: "btn-ghost", onClick: closeModal },
@@ -620,6 +673,24 @@ export function mountApp(root) {
         closeModal();
       };
     });
+  }
+
+  function openUniversityModal() {
+    var current = universityOf(S.me.id) || "";
+    openModal("Your university",
+      '<div class="field"><label>University</label><input id="university-input" type="text" list="university-options-modal" value="' + esc(current) + '" placeholder="Start typing your school" autocomplete="off">' +
+      '<datalist id="university-options-modal">' + UNIVERSITIES.map(function (u) { return '<option value="' + esc(u) + '">'; }).join("") + "</datalist></div>",
+      [
+        { label: "Save", cls: "btn-primary", onClick: async function () {
+            var v = $("#university-input").value.trim();
+            try {
+              if (v) await Db.doc("accounts/" + S.me.id).update({ university: v });
+              else await Db.doc("accounts/" + S.me.id).update({ university: deleteField() });
+            } catch (e) {}
+            closeModal();
+          } },
+        { label: "Cancel", cls: "btn-ghost", onClick: closeModal },
+      ]);
   }
 
   function openSetPasswordModal() {
@@ -983,7 +1054,9 @@ export function mountApp(root) {
         avRing.style.background = "linear-gradient(135deg, var(--cat-" + colorOf(S.me.id, "blue") + "), var(--cat-" + colorOf(id, "pink") + "))";
         var av = paintAvatar(el("div", "avatar a2", esc(initials(displayNameOf(id)))), id, "pink");
         avRing.appendChild(av);
-        var name = el("div", "name", '<div class="n1">' + esc(nicknameOf(id)) + "</div>" +
+        var uni = universityOf(id);
+        var name = el("div", "name", '<div class="n1">' + esc(nicknameOf(id)) +
+          (uni ? ' <span class="id-badge">' + esc(universityShort(uni)) + "</span>" : "") + "</div>" +
           (nicknameOf(id) !== displayNameOf(id) ? '<div class="n2">' + esc(displayNameOf(id)) + "</div>" : ""));
         row.appendChild(avRing); row.appendChild(name);
         if (S.pickMode) {
@@ -1025,7 +1098,8 @@ export function mountApp(root) {
     var row = el("div", "person-row");
     var av = paintAvatar(el("div", "avatar sm", esc(initials(a.displayName))), a.id, "pink");
     var name = el("div", "name", '<div class="n1">' + esc(a.displayName) +
-      (a.userId ? ' <span class="id-badge">#' + esc(a.userId) + "</span>" : "") + "</div>");
+      (a.userId ? ' <span class="id-badge">#' + esc(a.userId) + "</span>" : "") + "</div>" +
+      (a.university ? '<div class="n2">' + esc(universityShort(a.university)) + "</div>" : ""));
     row.appendChild(av); row.appendChild(name);
     if (S.sharesFrom.has(a.id)) {
       var badge = el("button", "btn btn-shared btn-sm", "Shared ✓");
@@ -1064,16 +1138,21 @@ export function mountApp(root) {
 
   async function computeClassmateIds() {
     var mine = (S.mySchedule && S.mySchedule.events) || [];
-    if (!mine.length) return [];
+    var myUni = universityOf(S.me.id);
+    if (!mine.length && !myUni) return [];
     if (classmatesCache.ids && Date.now() - classmatesCache.fetchedAt < CLASSMATES_TTL) return classmatesCache.ids;
     var others = S.accounts.filter(function (a) { return a.id !== S.me.id; });
     var results = [];
     for (var i = 0; i < others.length; i++) {
-      var id = others[i].id;
+      var a = others[i];
+      // Same school is a cheap, no-read match — check it before spending a
+      // schedule fetch on the exact-class check.
+      if (myUni && a.university === myUni) { results.push(a.id); continue; }
+      if (!mine.length) continue;
       try {
-        var snap = await Db.doc("schedules/" + id).get();
+        var snap = await Db.doc("schedules/" + a.id).get();
         var evs = (snap.exists && snap.data().events) || [];
-        if (evs.some(function (e) { return mine.some(function (m) { return sameClass(e, m); }); })) results.push(id);
+        if (evs.some(function (e) { return mine.some(function (m) { return sameClass(e, m); }); })) results.push(a.id);
       } catch (e) { /* skip on error */ }
     }
     classmatesCache = { ids: results, fetchedAt: Date.now() };
@@ -1088,8 +1167,10 @@ export function mountApp(root) {
     sec.innerHTML = '<div class="sec-head"><h3>Classmates</h3>' +
       (ids.length ? '<span class="count-badge">' + ids.length + "</span>" : "") + "</div>";
     var card = el("div", "card");
-    if (!S.mySchedule || !S.mySchedule.events || !S.mySchedule.events.length) {
-      card.appendChild(el("p", "empty-note", "Upload your schedule to see who else on Schedule Share shares a class with you."));
+    var haveSchedule = S.mySchedule && S.mySchedule.events && S.mySchedule.events.length;
+    var haveUni = !!universityOf(S.me.id);
+    if (!haveSchedule && !haveUni) {
+      card.appendChild(el("p", "empty-note", "Upload your schedule or add your university (in your profile) to see who else on Schedule Share shares a class or school with you."));
     } else if (!ids.length) {
       card.appendChild(el("p", "empty-note", "No classmates found yet — this updates automatically as more people sign up."));
     } else {
