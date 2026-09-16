@@ -216,6 +216,10 @@
   .field input:focus, .field select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
   .field-row { display: flex; gap: 10px; }
   .field-row .field { flex: 1; min-width: 0; }
+  .uni-fields { display: flex; flex-direction: column; gap: 10px; }
+  .class-detail { padding-bottom: 4px; margin-bottom: 4px; border-bottom: 1px solid var(--line); }
+  .class-detail-time { margin: 0; font-size: 1.6rem; font-weight: 800; letter-spacing: -0.01em; }
+  .class-detail-sub { margin: 4px 0 0; font-size: 1rem; color: var(--muted); }
   .btn {
     border: none;
     border-radius: 12px;
@@ -471,6 +475,7 @@
     position: absolute; left: 2px; right: 2px; border-radius: 3px;
     padding: 4px 6px; overflow: hidden;
     border-left: 3px solid; box-shadow: var(--shadow);
+    cursor: pointer;
   }
   .evt.you { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
   .evt.them { background: var(--accent2-soft); border-color: var(--accent2); color: var(--ink); }

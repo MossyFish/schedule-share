@@ -26,11 +26,12 @@ import {
 } from "firebase/firestore";
 
 var DOW_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+var DOW_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 var BYDAY_TO_NUM = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
 
 var UNIVERSITIES = [
-  "University of Waterloo", "Western University", "University of Toronto", "York University",
-  "McMaster University", "Queen's University", "University of Ottawa", "Carleton University",
+  "University of Waterloo", "University of Toronto", "McMaster University", "Queen's University",
+  "Western University", "York University", "University of Ottawa", "Carleton University",
   "University of Guelph", "Wilfrid Laurier University", "Toronto Metropolitan University",
   "McGill University", "Concordia University", "Université de Montréal",
   "University of British Columbia", "Simon Fraser University", "University of Victoria",
@@ -410,6 +411,37 @@ export function mountApp(root) {
       '<div class="unavailable">Firebase isn’t configured yet. Add your Firebase project keys to .env.local (see .env.local.example) and reload.</div>';
   }
 
+  var UNIVERSITY_OTHER = "__other__";
+
+  function universityFieldHtml(idPrefix, current) {
+    var isOther = !!current && UNIVERSITIES.indexOf(current) === -1;
+    var options = '<option value="">— Select —</option>' +
+      UNIVERSITIES.map(function (u) {
+        return '<option value="' + esc(u) + '"' + (u === current ? " selected" : "") + ">" + esc(u) + "</option>";
+      }).join("") +
+      '<option value="' + UNIVERSITY_OTHER + '"' + (isOther ? " selected" : "") + ">Other</option>";
+    return '<div class="field"><label>University</label><select id="' + idPrefix + '-select">' + options + "</select></div>" +
+      '<div class="field" id="' + idPrefix + '-other-wrap"' + (isOther ? "" : ' style="display:none"') + ">" +
+      '<label>Your university</label><input id="' + idPrefix + '-other" type="text" placeholder="Type your university" value="' + esc(isOther ? current : "") + '"></div>';
+  }
+
+  function wireUniversityField(idPrefix) {
+    var select = $("#" + idPrefix + "-select");
+    var wrap = $("#" + idPrefix + "-other-wrap");
+    if (!select || !wrap) return;
+    select.addEventListener("change", function () {
+      wrap.style.display = select.value === UNIVERSITY_OTHER ? "" : "none";
+      if (select.value === UNIVERSITY_OTHER) $("#" + idPrefix + "-other").focus();
+    });
+  }
+
+  function readUniversityField(idPrefix) {
+    var select = $("#" + idPrefix + "-select");
+    if (!select || !select.value) return "";
+    if (select.value === UNIVERSITY_OTHER) return $("#" + idPrefix + "-other").value.trim();
+    return select.value;
+  }
+
   // ================= AUTH =================
   function renderAuth() {
     var body = $("#auth-body");
@@ -426,8 +458,7 @@ export function mountApp(root) {
     if (S.authMode === "signup") {
       var f = el("div", "field", '<label>Your name</label><input id="signup-name" type="text" placeholder="e.g. Fei Wang" autocomplete="name">');
       var fp = el("div", "field", '<label>Password</label><input id="signup-pass" type="password" placeholder="At least 6 characters" autocomplete="new-password">');
-      var fu = el("div", "field", '<label>University (optional)</label><input id="signup-university" type="text" list="university-options" placeholder="Start typing your school" autocomplete="off">' +
-        '<datalist id="university-options">' + UNIVERSITIES.map(function (u) { return '<option value="' + esc(u) + '">'; }).join("") + "</datalist>");
+      var fu = el("div", "uni-fields", universityFieldHtml("signup-university", ""));
       frag.appendChild(f);
       frag.appendChild(fp);
       frag.appendChild(fu);
@@ -450,6 +481,7 @@ export function mountApp(root) {
 
     body.innerHTML = "";
     body.appendChild(frag);
+    if (S.authMode === "signup") wireUniversityField("signup-university");
     var submit = function () { (S.authMode === "signup" ? doSignup : doLogin)(); };
     frag.querySelectorAll("input").forEach(function (inp) {
       inp.addEventListener("keydown", function (e) { if (e.key === "Enter") submit(); });
@@ -467,7 +499,7 @@ export function mountApp(root) {
   async function doSignup() {
     var name = $("#signup-name").value.trim();
     var password = $("#signup-pass").value;
-    var university = $("#signup-university") ? $("#signup-university").value.trim() : "";
+    var university = readUniversityField("signup-university");
     S.authError = "";
     if (!name) { S.authError = "Enter your name to continue."; renderAuth(); return; }
     if (password.length < 6) { S.authError = "Password must be at least 6 characters."; renderAuth(); return; }
@@ -661,12 +693,10 @@ export function mountApp(root) {
 
   function openUniversityModal() {
     var current = universityOf(S.me.id) || "";
-    openModal("Your university",
-      '<div class="field"><label>University</label><input id="university-input" type="text" list="university-options-modal" value="' + esc(current) + '" placeholder="Start typing your school" autocomplete="off">' +
-      '<datalist id="university-options-modal">' + UNIVERSITIES.map(function (u) { return '<option value="' + esc(u) + '">'; }).join("") + "</datalist></div>",
+    openModal("Your university", universityFieldHtml("account-university", current),
       [
         { label: "Save", cls: "btn-primary", onClick: async function () {
-            var v = $("#university-input").value.trim();
+            var v = readUniversityField("account-university");
             try {
               if (v) await Db.doc("accounts/" + S.me.id).update({ university: v });
               else await Db.doc("accounts/" + S.me.id).update({ university: deleteField() });
@@ -675,6 +705,7 @@ export function mountApp(root) {
           } },
         { label: "Cancel", cls: "btn-ghost", onClick: closeModal },
       ]);
+    wireUniversityField("account-university");
   }
 
   function openSetPasswordModal() {
@@ -1201,9 +1232,18 @@ export function mountApp(root) {
       norm(a.title) === norm(b.title) && normLoc(a.location) === normLoc(b.location);
   }
 
+  function classDetailHtml(classEvent) {
+    return '<div class="class-detail">' +
+      '<p class="class-detail-time">' + esc(fmtTime(classEvent.start)) + "–" + esc(fmtTime(classEvent.end)) + "</p>" +
+      '<p class="class-detail-sub">' + esc(DOW_FULL[classEvent.day]) +
+      (classEvent.location ? " · " + esc(classEvent.location) : "") + "</p>" +
+      "</div>";
+  }
+
   async function showClassMutuals(classEvent) {
     var mutualIds = getMutualIds();
-    openModal(esc(classEvent.title), '<div class="busy"><span class="spinner"></span><span>Checking your mutual friends…</span></div>', [
+    var detail = classDetailHtml(classEvent);
+    openModal(esc(classEvent.title), detail + '<div class="busy"><span class="spinner"></span><span>Checking your mutual friends…</span></div>', [
       { label: "Close", cls: "btn-ghost", onClick: closeModal },
     ]);
     var matches = [];
@@ -1216,14 +1256,14 @@ export function mountApp(root) {
       } catch (e) { /* skip on error */ }
     }
     var myColor = colorOf(S.me.id, "blue");
-    var body = matches.length
+    var body = detail + (matches.length
       ? matches.map(function (id) {
           var c = colorOf(id, "pink");
           return '<div class="person-row"><div class="avatar-ring" style="background:linear-gradient(135deg, var(--cat-' + myColor + '), var(--cat-' + c + '))">' +
             '<div class="avatar a2" style="background:var(--cat-' + c + '-soft);color:var(--cat-' + c + ')">' + esc(initials(displayNameOf(id))) +
             '</div></div><div class="name"><div class="n1">' + esc(nicknameOf(id)) + "</div></div></div>";
         }).join("")
-      : '<p class="empty-note" style="padding:0;">None of your mutual friends share this class.</p>';
+      : '<p class="empty-note" style="padding:0;">None of your mutual friends share this class.</p>');
     openModal(esc(classEvent.title), body, [{ label: "Close", cls: "btn-ghost", onClick: closeModal }]);
   }
 
@@ -1413,6 +1453,7 @@ export function mountApp(root) {
       box.innerHTML = '<span class="t">' + esc(e.title) + '</span>' +
         (e.location ? '<span class="l">' + esc(shortenLocation(e.location)) + "</span>" : "") +
         '<span class="time">' + fmtTime(e.start) + "–" + fmtTime(e.end) + "</span>";
+      box.onclick = function () { showClassMutuals(e); };
       col.appendChild(box);
     });
     return col;
