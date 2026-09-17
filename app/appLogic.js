@@ -456,7 +456,9 @@ export function mountApp(root) {
     frag.appendChild(tabs);
 
     if (S.authMode === "signup") {
-      var f = el("div", "field", '<label>Your name</label><input id="signup-name" type="text" placeholder="e.g. Fei Wang" autocomplete="name">');
+      var f = el("div", "field-row",
+        '<div class="field"><label>First name</label><input id="signup-first" type="text" placeholder="e.g. Fei" autocomplete="given-name"></div>' +
+        '<div class="field"><label>Last name</label><input id="signup-last" type="text" placeholder="e.g. Wang" autocomplete="family-name"></div>');
       var fp = el("div", "field", '<label>Password</label><input id="signup-pass" type="password" placeholder="At least 6 characters" autocomplete="new-password">');
       var fu = el("div", "uni-fields", universityFieldHtml("signup-university", ""));
       frag.appendChild(f);
@@ -486,7 +488,7 @@ export function mountApp(root) {
     frag.querySelectorAll("input").forEach(function (inp) {
       inp.addEventListener("keydown", function (e) { if (e.key === "Enter") submit(); });
     });
-    var inputToFocus = S.authMode === "signup" ? $("#signup-name") : $("#login-name");
+    var inputToFocus = S.authMode === "signup" ? $("#signup-first") : $("#login-name");
     if (inputToFocus) inputToFocus.focus();
   }
 
@@ -497,11 +499,13 @@ export function mountApp(root) {
   }
 
   async function doSignup() {
-    var name = $("#signup-name").value.trim();
+    var firstName = $("#signup-first").value.trim();
+    var lastName = $("#signup-last").value.trim();
     var password = $("#signup-pass").value;
     var university = readUniversityField("signup-university");
     S.authError = "";
-    if (!name) { S.authError = "Enter your name to continue."; renderAuth(); return; }
+    if (!firstName || !lastName) { S.authError = "Enter your first and last name to continue."; renderAuth(); return; }
+    var name = firstName + " " + lastName;
     if (password.length < 6) { S.authError = "Password must be at least 6 characters."; renderAuth(); return; }
     var id = normalize(name);
     var btn = $("#auth-body .btn-primary"); btn.disabled = true; btn.textContent = "Creating…";
