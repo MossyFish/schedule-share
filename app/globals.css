@@ -434,6 +434,9 @@
   .btn-shared:hover { filter: brightness(0.97); }
   .pencil { border: none; background: transparent; color: var(--faint); cursor: pointer; padding: 6px; flex-shrink: 0; }
   .pencil svg { width: 15px; height: 15px; }
+  .star-btn { border: none; background: transparent; color: var(--faint); cursor: pointer; padding: 6px; flex-shrink: 0; }
+  .star-btn svg { width: 17px; height: 17px; }
+  .star-btn.active { color: #E0A83E; }
 
   /* ---------- Compare view ---------- */
   #compare { display: none; flex-direction: column; flex: 1; min-height: 100dvh; }

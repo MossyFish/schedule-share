@@ -270,6 +270,9 @@ export function mountApp(root) {
     var nick = S.profile && S.profile.nicknames && S.profile.nicknames[id];
     return nick || displayNameOf(id);
   }
+  function isStarred(id) {
+    return !!(S.profile && S.profile.starred && S.profile.starred[id]);
+  }
   function userIdOf(id) {
     var a = S.accounts.find(function (x) { return x.id === id; });
     return a && a.userId;
@@ -279,8 +282,11 @@ export function mountApp(root) {
     return a && a.university;
   }
   function getMutualIds() {
-    return S.accounts.map(function (a) { return a.id; })
+    var ids = S.accounts.map(function (a) { return a.id; })
       .filter(function (id) { return id !== S.me.id && S.sharesFrom.has(id) && S.sharesTo.has(id); });
+    var starred = ids.filter(isStarred);
+    var rest = ids.filter(function (id) { return !isStarred(id); });
+    return starred.concat(rest);
   }
 
   var PROFILE_COLORS = ["blue", "purple", "pink", "green", "amber", "red"];
@@ -1196,10 +1202,19 @@ export function mountApp(root) {
             renderFriendsTab();
           };
         } else {
+          var starred = isStarred(id);
+          var starBtn = el("button", "star-btn" + (starred ? " active" : ""),
+            '<svg viewBox="0 0 24 24" fill="' + (starred ? "currentColor" : "none") + '"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.2 1 5.9-5.2-2.8-5.2 2.8 1-5.9-4.3-4.2 5.9-.8Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>');
+          starBtn.title = starred ? "Unstar" : "Star";
+          starBtn.onclick = function (ev) {
+            ev.stopPropagation();
+            var next = !isStarred(id);
+            Db.doc("profiles/" + S.me.id).update({ ["starred." + id]: next }).catch(function () {});
+          };
           var pencil = el("button", "pencil", '<svg viewBox="0 0 24 24" fill="none"><path d="M17.5 3.5a2.12 2.12 0 013 3L9 18 4 19l1-5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>');
           pencil.onclick = function (ev) { ev.stopPropagation(); openNicknameModal(id); };
           var chev = el("div", "chevron", '<svg viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
-          row.appendChild(pencil); row.appendChild(chev);
+          row.appendChild(starBtn); row.appendChild(pencil); row.appendChild(chev);
           row.onclick = function () { openCompare(id); };
         }
         list.appendChild(row);
