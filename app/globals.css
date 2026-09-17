@@ -321,6 +321,7 @@
 
   .card { background: var(--surface-2); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
   .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .upload-tile-wide { grid-column: 1 / -1; }
   .upload-tile {
     border: 1.5px dashed var(--line); border-radius: 12px; background: var(--surface);
     padding: 16px 10px; display: flex; flex-direction: column; align-items: center; gap: 8px;

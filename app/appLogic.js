@@ -222,6 +222,20 @@ export function mountApp(root) {
   function toMin(hhmm) { var p = hhmm.split(":"); return (+p[0]) * 60 + (+p[1]); }
   function addDays(date, n) { var d = new Date(date); d.setDate(d.getDate() + n); return d; }
   function sameDate(a, b) { return a.toDateString() === b.toDateString(); }
+  function mondayOf(date) {
+    var d = new Date(date);
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+  /** "A" or "B" depending which side of the alternation `date` falls on,
+   *  relative to a stored anchor date (any date inside the "A" week). */
+  function weekLabelForDate(date, anchorStr) {
+    if (!anchorStr) return null;
+    var anchor = new Date(anchorStr + "T00:00:00");
+    var diffWeeks = Math.round((mondayOf(date) - mondayOf(anchor)) / (7 * 86400000));
+    return (((diffWeeks % 2) + 2) % 2) === 0 ? "A" : "B";
+  }
   function fmtDateLabel(date) { return date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }); }
   function fmtTime(hhmm) {
     var p = hhmm.split(":"); var h = +p[0]; var m = p[1];
@@ -814,9 +828,13 @@ export function mountApp(root) {
       var t2 = el("div", "upload-tile",
         '<div class="chip"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M4 9.5H20" stroke="currentColor" stroke-width="1.7"/><path d="M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>' +
         "<span>Upload .ics file</span><small>From Google Calendar</small>");
+      var t3 = el("div", "upload-tile upload-tile-wide",
+        '<div class="chip"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="8" height="16" rx="2" stroke="currentColor" stroke-width="1.7"/><rect x="13" y="4" width="8" height="16" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M7 9v2M17 9v2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>' +
+        "<span>Alternating Weekly Schedule</span><small>Two screenshots, one per alternating week</small>");
       t1.onclick = function () { $("#file-shot").click(); };
       t2.onclick = function () { $("#file-ics").click(); };
-      grid.appendChild(t1); grid.appendChild(t2);
+      t3.onclick = openAlternatingUploadModal;
+      grid.appendChild(t1); grid.appendChild(t2); grid.appendChild(t3);
       card.appendChild(grid);
     }
     uploadSec.appendChild(card);
@@ -837,8 +855,14 @@ export function mountApp(root) {
       var freeNowSlot = el("div", "free-now-slot");
       todaySec.appendChild(freeNowSlot);
       renderFreeNowWidget(freeNowSlot);
-      var today = new Date().getDay();
-      var todays = S.mySchedule.events.filter(function (e) { return e.day === today; }).sort(function (a, b) { return toMin(a.start) - toMin(b.start); });
+      var todayDate = new Date();
+      var today = todayDate.getDay();
+      var myAnchor = S.mySchedule.alternatingAnchor;
+      var todays = S.mySchedule.events.filter(function (e) {
+        if (e.day !== today) return false;
+        if (e.week) return weekLabelForDate(todayDate, myAnchor) === e.week;
+        return true;
+      }).sort(function (a, b) { return toMin(a.start) - toMin(b.start); });
       if (!todays.length) {
         var emptyCard = el("div", "card");
         emptyCard.appendChild(el("p", "empty-note", "No classes today!"));
@@ -849,7 +873,7 @@ export function mountApp(root) {
           var r = el("div", "status-row today-tile");
           r.innerHTML = '<span class="swatch" style="background:' + subjectColorVar(e.title) + '"></span><div><p>' + esc(e.title) +
             '</p><p class="muted">' + fmtTime(e.start) + ' – ' + fmtTime(e.end) + (e.location ? " · " + esc(e.location) : "") + '</p></div>';
-          r.onclick = function () { showClassMutuals(e); };
+          r.onclick = function () { e.isManual ? openEditOfficeHoursModal(e) : showClassMutuals(e); };
           list.appendChild(r);
         });
         todaySec.appendChild(list);
@@ -933,6 +957,16 @@ export function mountApp(root) {
       f2.onchange = function () { if (f2.files[0]) handleIcs(f2.files[0]); f2.value = ""; };
       root.appendChild(f2);
     }
+    if (!$("#file-shot-alt")) {
+      var f3 = el("input", ""); f3.type = "file"; f3.id = "file-shot-alt"; f3.accept = "image/*"; f3.multiple = true; f3.hidden = true;
+      f3.onchange = function () {
+        var files = Array.from(f3.files || []);
+        if (files.length === 2) handleAlternatingScreenshots(files, S._altAnchor);
+        else if (files.length) toast("Select exactly 2 photos — one for each week.");
+        f3.value = "";
+      };
+      root.appendChild(f3);
+    }
   }
 
   function openUploadModal() {
@@ -945,39 +979,73 @@ export function mountApp(root) {
 
   var OH_DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-  function openAddOfficeHoursModal() {
+  function officeHoursFormHtml(existing) {
     var dayOptions = [1, 2, 3, 4, 5].map(function (d) {
-      return '<option value="' + d + '"' + (d === 1 ? " selected" : "") + ">" + OH_DAY_NAMES[d] + "</option>";
+      return '<option value="' + d + '"' + (d === (existing ? existing.day : 1) ? " selected" : "") + ">" + OH_DAY_NAMES[d] + "</option>";
     }).join("");
-    openModal("Add office hours",
-      '<div class="field"><label>Title</label><input id="oh-title" type="text" value="Office Hours" maxlength="60"></div>' +
+    return '<div class="field"><label>Title</label><input id="oh-title" type="text" value="' + esc(existing ? existing.title : "Office Hours") + '" maxlength="60"></div>' +
       '<div class="field"><label>Day</label><select id="oh-day">' + dayOptions + "</select></div>" +
       '<div class="field-row">' +
-        '<div class="field"><label>Start</label><input id="oh-start" type="time" value="10:00"></div>' +
-        '<div class="field"><label>End</label><input id="oh-end" type="time" value="11:00"></div>' +
+        '<div class="field"><label>Start</label><input id="oh-start" type="time" value="' + esc(existing ? existing.start : "10:00") + '"></div>' +
+        '<div class="field"><label>End</label><input id="oh-end" type="time" value="' + esc(existing ? existing.end : "11:00") + '"></div>' +
       "</div>" +
-      '<div class="field"><label>Location</label><input id="oh-location" type="text" placeholder="Optional" maxlength="80"></div>',
-      [
-        { label: "Add", cls: "btn-primary", onClick: async function () {
-            var title = $("#oh-title").value.trim();
-            var day = Number($("#oh-day").value);
-            var start = $("#oh-start").value;
-            var end = $("#oh-end").value;
-            var location = $("#oh-location").value.trim();
-            if (!title) { toast("Give it a title."); return; }
-            if (!start || !end || toMin(end) <= toMin(start)) { toast("End time must be after start time."); return; }
-            var event = { day: day, start: start, end: end, title: title };
-            if (location) event.location = location;
-            var events = ((S.mySchedule && S.mySchedule.events) || []).concat([event]);
-            var source = (S.mySchedule && S.mySchedule.source) || "manual";
-            try {
-              await Db.doc("schedules/" + S.me.id).set({ events: events, source: source, updatedAt: new Date().toISOString() });
-              toast("Office hours added.");
-              closeModal();
-            } catch (e) { toast("Couldn't save — try again."); }
-          } },
-        { label: "Cancel", cls: "btn-ghost", onClick: closeModal },
-      ]);
+      '<div class="field"><label>Location</label><input id="oh-location" type="text" placeholder="Optional" maxlength="80" value="' + esc(existing && existing.location ? existing.location : "") + '"></div>';
+  }
+
+  function readOfficeHoursForm() {
+    var title = $("#oh-title").value.trim();
+    var day = Number($("#oh-day").value);
+    var start = $("#oh-start").value;
+    var end = $("#oh-end").value;
+    var location = $("#oh-location").value.trim();
+    if (!title) { toast("Give it a title."); return null; }
+    if (!start || !end || toMin(end) <= toMin(start)) { toast("End time must be after start time."); return null; }
+    var event = { day: day, start: start, end: end, title: title, isManual: true };
+    if (location) event.location = location;
+    return event;
+  }
+
+  function openAddOfficeHoursModal() {
+    openModal("Add office hours", officeHoursFormHtml(null), [
+      { label: "Add", cls: "btn-primary", onClick: async function () {
+          var event = readOfficeHoursForm();
+          if (!event) return;
+          event.id = "oh-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+          var events = ((S.mySchedule && S.mySchedule.events) || []).concat([event]);
+          var source = (S.mySchedule && S.mySchedule.source) || "manual";
+          try {
+            await Db.doc("schedules/" + S.me.id).set({ events: events, source: source, updatedAt: new Date().toISOString() });
+            toast("Office hours added.");
+            closeModal();
+          } catch (e) { toast("Couldn't save — try again."); }
+        } },
+      { label: "Cancel", cls: "btn-ghost", onClick: closeModal },
+    ]);
+  }
+
+  function openEditOfficeHoursModal(existing) {
+    openModal("Edit office hours", officeHoursFormHtml(existing), [
+      { label: "Save", cls: "btn-primary", onClick: async function () {
+          var event = readOfficeHoursForm();
+          if (!event) return;
+          event.id = existing.id;
+          var events = ((S.mySchedule && S.mySchedule.events) || []).map(function (x) { return x.id === existing.id ? event : x; });
+          try {
+            await Db.doc("schedules/" + S.me.id).update({ events: events, updatedAt: new Date().toISOString() });
+            toast("Office hours updated.");
+            closeModal();
+          } catch (e) { toast("Couldn't save — try again."); }
+        } },
+      { label: "Delete", cls: "btn-outline", onClick: async function () {
+          var events = ((S.mySchedule && S.mySchedule.events) || []).filter(function (x) { return x.id !== existing.id; });
+          try {
+            await Db.doc("schedules/" + S.me.id).update({ events: events, updatedAt: new Date().toISOString() });
+            toast("Office hours removed.");
+            closeModal();
+          } catch (e) { toast("Couldn't remove — try again."); }
+        } },
+      { label: "Cancel", cls: "btn-ghost", onClick: closeModal },
+    ]);
   }
 
   async function handleIcs(file) {
@@ -1013,6 +1081,62 @@ export function mountApp(root) {
       toast("Schedule updated — " + events.length + " classes loaded.");
     } catch (e) {
       toast((e && e.message) || "Couldn't read that screenshot. Try again or use a .ics file instead.");
+    }
+    setBusy(false);
+  }
+
+  async function parseScreenshotImage(file) {
+    var idToken = await auth.currentUser.getIdToken();
+    var form = new FormData();
+    form.append("image", file);
+    var res = await fetch("/api/parse-schedule", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + idToken },
+      body: form,
+    });
+    var body = await res.json();
+    if (!res.ok) throw new Error(body.error || "Failed to read image.");
+    return body.events || [];
+  }
+
+  function openAlternatingUploadModal() {
+    var d = new Date();
+    var iso = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    openModal("Alternating weekly schedule",
+      '<p class="hint" style="margin:0 0 12px;">For a schedule that alternates week to week (common for software engineering and McMaster programs). Upload one screenshot for each week — you’ll pick both photos at once.</p>' +
+      '<div class="field"><label>A date inside your first photo’s week</label><input id="alt-anchor" type="date" value="' + iso + '"></div>',
+      [
+        { label: "Choose 2 photos", cls: "btn-primary", onClick: function () {
+            var anchor = $("#alt-anchor").value;
+            if (!anchor) { toast("Pick a date first."); return; }
+            S._altAnchor = anchor;
+            closeModal();
+            $("#file-shot-alt").click();
+          } },
+        { label: "Cancel", cls: "btn-ghost", onClick: closeModal },
+      ]);
+  }
+
+  async function handleAlternatingScreenshots(files, anchorDateStr) {
+    setBusy(true, "Reading week A…");
+    try {
+      var eventsA = await parseScreenshotImage(files[0]);
+      setBusy(true, "Reading week B…");
+      var eventsB = await parseScreenshotImage(files[1]);
+      if (!eventsA.length && !eventsB.length) {
+        toast("Couldn't read any classes from those images — try clearer screenshots.");
+        setBusy(false);
+        return;
+      }
+      eventsA.forEach(function (e) { e.week = "A"; });
+      eventsB.forEach(function (e) { e.week = "B"; });
+      var events = eventsA.concat(eventsB);
+      await Db.doc("schedules/" + S.me.id).set({
+        events: events, source: "screenshot-alternating", alternatingAnchor: anchorDateStr, updatedAt: new Date().toISOString(),
+      });
+      toast("Alternating schedule updated — " + eventsA.length + " + " + eventsB.length + " classes loaded.");
+    } catch (e) {
+      toast((e && e.message) || "Couldn't read those screenshots. Try again.");
     }
     setBusy(false);
   }
@@ -1240,7 +1364,8 @@ export function mountApp(root) {
     return '<div class="class-detail">' +
       '<p class="class-detail-time">' + esc(fmtTime(classEvent.start)) + "–" + esc(fmtTime(classEvent.end)) + "</p>" +
       '<p class="class-detail-sub">' + esc(DOW_FULL[classEvent.day]) +
-      (classEvent.location ? " · " + esc(classEvent.location) : "") + "</p>" +
+      (classEvent.location ? " · " + esc(classEvent.location) : "") +
+      (classEvent.week ? " · Week " + esc(classEvent.week) : "") + "</p>" +
       "</div>";
   }
 
@@ -1371,18 +1496,21 @@ export function mountApp(root) {
 
   function buildCompareSeries() {
     var mine = (S.mySchedule && S.mySchedule.events) || [];
-    if (S.compare.kind === "solo") return [{ events: mine, cls: "you", label: "You" }];
+    var myAnchor = S.mySchedule && S.mySchedule.alternatingAnchor;
+    if (S.compare.kind === "solo") return [{ events: mine, cls: "you", label: "You", isMine: true, anchor: myAnchor }];
     if (S.compare.kind === "pair") {
-      var theirs = (S.compare.schedules[S.compare.targetIds[0]] && S.compare.schedules[S.compare.targetIds[0]].events) || [];
+      var theirSchedule = S.compare.schedules[S.compare.targetIds[0]];
+      var theirs = (theirSchedule && theirSchedule.events) || [];
       return [
-        { events: mine, cls: "cat-" + colorOf(S.me.id, "blue"), label: "You" },
-        { events: theirs, cls: "cat-" + colorOf(S.compare.targetIds[0], "pink"), label: nicknameOf(S.compare.targetIds[0]) },
+        { events: mine, cls: "cat-" + colorOf(S.me.id, "blue"), label: "You", isMine: true, anchor: myAnchor },
+        { events: theirs, cls: "cat-" + colorOf(S.compare.targetIds[0], "pink"), label: nicknameOf(S.compare.targetIds[0]), isMine: false, anchor: theirSchedule && theirSchedule.alternatingAnchor },
       ];
     }
-    var out = [{ events: mine, cls: MULTI_COLORS[0], label: "You" }];
+    var out = [{ events: mine, cls: MULTI_COLORS[0], label: "You", isMine: true, anchor: myAnchor }];
     S.compare.targetIds.forEach(function (id, i) {
-      var evs = (S.compare.schedules[id] && S.compare.schedules[id].events) || [];
-      out.push({ events: evs, cls: MULTI_COLORS[i + 1] || "cat-gray", label: nicknameOf(id) });
+      var sched = S.compare.schedules[id];
+      var evs = (sched && sched.events) || [];
+      out.push({ events: evs, cls: MULTI_COLORS[i + 1] || "cat-gray", label: nicknameOf(id), isMine: false, anchor: sched && sched.alternatingAnchor });
     });
     return out;
   }
@@ -1443,9 +1571,14 @@ export function mountApp(root) {
     return gl;
   }
 
-  function buildPersonCol(events, day, axis, pxPerMin, cls, bySubject) {
+  function buildPersonCol(events, date, axis, pxPerMin, cls, bySubject, isMine, anchor) {
+    var day = date.getDay();
     var col = el("div", "personcol " + cls);
-    events.filter(function (e) { return e.day === day; }).forEach(function (e) {
+    events.filter(function (e) {
+      if (e.day !== day) return false;
+      if (e.week) return weekLabelForDate(date, anchor) === e.week;
+      return true;
+    }).forEach(function (e) {
       var s = toMin(e.start), en = Math.max(toMin(e.end), s + 15);
       var top = (s - axis.startMin) * pxPerMin;
       var minHeight = 16;
@@ -1457,7 +1590,7 @@ export function mountApp(root) {
       box.innerHTML = '<span class="t">' + esc(e.title) + '</span>' +
         (e.location ? '<span class="l">' + esc(shortenLocation(e.location)) + "</span>" : "") +
         '<span class="time">' + fmtTime(e.start) + "–" + fmtTime(e.end) + "</span>";
-      box.onclick = function () { showClassMutuals(e); };
+      box.onclick = (isMine && e.isManual) ? function () { openEditOfficeHoursModal(e); } : function () { showClassMutuals(e); };
       col.appendChild(box);
     });
     return col;
@@ -1477,7 +1610,6 @@ export function mountApp(root) {
 
   function renderDayView(container, axis, series, viewDate, bySubject) {
     var pxPerMin = 0.85;
-    var day = viewDate.getDay();
     var isToday = sameDate(viewDate, new Date());
     var wrap = el("div", "daywrap");
     wrap.appendChild(buildDayNav(viewDate, isToday));
@@ -1487,7 +1619,7 @@ export function mountApp(root) {
     var planes = el("div", "planecols");
     planes.style.height = ((axis.endMin - axis.startMin) * pxPerMin) + "px";
     planes.appendChild(buildGridlines(axis, pxPerMin));
-    series.forEach(function (s) { planes.appendChild(buildPersonCol(s.events, day, axis, pxPerMin, s.cls, bySubject)); });
+    series.forEach(function (s) { planes.appendChild(buildPersonCol(s.events, viewDate, axis, pxPerMin, s.cls, bySubject, s.isMine, s.anchor)); });
     if (isToday) {
       var nowLine = buildNowLine(axis, pxPerMin);
       if (nowLine) planes.appendChild(nowLine);
@@ -1587,7 +1719,7 @@ export function mountApp(root) {
       var miniEl = el("div", "mini" + (series.length > 1 ? " dual" : ""));
       miniEl.style.height = totalH + "px";
       miniEl.appendChild(buildGridlines(axis, pxPerMin));
-      series.forEach(function (s) { miniEl.appendChild(buildPersonCol(s.events, day, axis, pxPerMin, s.cls, bySubject)); });
+      series.forEach(function (s) { miniEl.appendChild(buildPersonCol(s.events, date, axis, pxPerMin, s.cls, bySubject, s.isMine, s.anchor)); });
       card.appendChild(miniEl);
       scroller.appendChild(card);
     });
