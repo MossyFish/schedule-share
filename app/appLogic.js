@@ -50,6 +50,13 @@ var UNIVERSITIES = [
 ];
 
 var SHELL_HTML = `
+  <!-- SPLASH (shown until the initial auth check resolves, to avoid flashing the login form) -->
+  <div id="splash">
+    <div class="mark">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M8 2v4M16 2v4M3 10h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><rect x="7" y="13" width="4.5" height="3.5" rx="1" fill="currentColor"/></svg>
+    </div>
+  </div>
+
   <!-- AUTH -->
   <div id="auth">
     <div class="brand">
@@ -407,7 +414,7 @@ export function mountApp(root) {
   function init() {
     applyStoredThemeIfAny();
     $("#auth-theme-slot").appendChild(buildThemeToggle());
-    if (!firebaseReady) { renderUnavailable(); return; }
+    if (!firebaseReady) { showAuthScreen(); renderUnavailable(); return; }
     authUnsub = onAuthStateChanged(auth, async function (user) {
       if (!user) {
         if (S.me) teardownSession();
@@ -512,6 +519,7 @@ export function mountApp(root) {
   }
 
   function showAuthScreen() {
+    $("#splash").style.display = "none";
     $("#auth").style.display = "flex";
     $("#app").style.display = "none";
     $("#compare").style.display = "none";
@@ -605,6 +613,7 @@ export function mountApp(root) {
 
   // ================= APP =================
   async function enterApp() {
+    $("#splash").style.display = "none";
     $("#auth").style.display = "none";
     $("#app").style.display = "flex";
     $("#compare").style.display = "none";
