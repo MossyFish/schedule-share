@@ -22,7 +22,6 @@ import {
   orderBy,
   limit,
   runTransaction,
-  deleteField,
 } from "firebase/firestore";
 
 var DOW_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -683,7 +682,6 @@ export function mountApp(root) {
       '<p class="hint" style="margin:0;">Your login is remembered on this device.</p>',
       [
         { label: "Profile color", cls: "btn-outline", onClick: function () { closeModal(); openColorPickerModal(); } },
-        { label: "University", cls: "btn-outline", onClick: function () { closeModal(); openUniversityModal(); } },
         { label: "Set password", cls: "btn-outline", onClick: function () { closeModal(); openSetPasswordModal(); } },
         { label: "Log out", cls: "btn-outline", onClick: function () { closeModal(); logout(); } },
         { label: "Close", cls: "btn-ghost", onClick: closeModal },
@@ -707,23 +705,6 @@ export function mountApp(root) {
         closeModal();
       };
     });
-  }
-
-  function openUniversityModal() {
-    var current = universityOf(S.me.id) || "";
-    openModal("Your university", universityFieldHtml("account-university", current),
-      [
-        { label: "Save", cls: "btn-primary", onClick: async function () {
-            var v = readUniversityField("account-university");
-            try {
-              if (v) await Db.doc("accounts/" + S.me.id).update({ university: v });
-              else await Db.doc("accounts/" + S.me.id).update({ university: deleteField() });
-            } catch (e) {}
-            closeModal();
-          } },
-        { label: "Cancel", cls: "btn-ghost", onClick: closeModal },
-      ]);
-    wireUniversityField("account-university");
   }
 
   function openSetPasswordModal() {
