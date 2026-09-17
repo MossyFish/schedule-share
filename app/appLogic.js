@@ -650,6 +650,10 @@ export function mountApp(root) {
       // listener resolves after the Friends tab already rendered once.
       classmatesCache = { ids: null, fetchedAt: 0 };
       renderClassmatesSection();
+      // If the solo day/week compare view is open (e.g. behind an office-hours
+      // edit/delete modal), it built its series from mySchedule once at open
+      // time and won't otherwise pick up the change live.
+      if (S.compare && S.compare.kind === "solo") renderCompareBody();
     }));
     unsubs.push(Db.doc("profiles/" + S.me.id).onSnapshot(function (snap) {
       S.profile = snap.exists ? snap.data() : { nicknames: {} };
