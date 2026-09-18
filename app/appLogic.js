@@ -799,8 +799,13 @@ export function mountApp(root) {
       var card = el("div", "notif-card");
       card.innerHTML = "<p><b>" + esc(name) + "</b> shared their class schedule with you.</p>";
       var actions = el("div", "notif-actions");
-      var shareBack = el("button", "btn btn-primary btn-sm", "Share back");
-      shareBack.onclick = function () { doShareBack(n); };
+      if (S.sharesFrom.has(n.from)) {
+        var shareBack = el("button", "btn btn-shared btn-sm", "Shared ✓");
+        shareBack.onclick = function () { unshareWith(n.from); };
+      } else {
+        var shareBack = el("button", "btn btn-primary btn-sm", "Share back");
+        shareBack.onclick = function () { doShareBack(n); };
+      }
       var dismiss = el("button", "btn btn-ghost btn-sm", "Dismiss");
       dismiss.onclick = function () { dismissNotif(n.id); };
       actions.appendChild(shareBack); actions.appendChild(dismiss);
@@ -815,8 +820,10 @@ export function mountApp(root) {
 
   async function doShareBack(n) {
     try {
-      await Db.doc("shares/" + shareDocId(S.me.id, n.from)).set({ from: S.me.id, to: n.from, createdAt: new Date().toISOString() });
-      await Db.collection("notifications").add({ to: n.from, from: S.me.id, kind: "share", dismissed: false, createdAt: new Date().toISOString() });
+      if (!S.sharesFrom.has(n.from)) {
+        await Db.doc("shares/" + shareDocId(S.me.id, n.from)).set({ from: S.me.id, to: n.from, createdAt: new Date().toISOString() });
+        await Db.collection("notifications").add({ to: n.from, from: S.me.id, kind: "share", dismissed: false, createdAt: new Date().toISOString() });
+      }
       await dismissNotif(n.id);
       toast("Shared back with " + displayNameOf(n.from));
     } catch (e) { toast("Couldn't share back — try again."); }
@@ -1361,6 +1368,7 @@ export function mountApp(root) {
   }
 
   async function shareWith(targetId) {
+    if (S.sharesFrom.has(targetId)) return;
     try {
       await Db.doc("shares/" + shareDocId(S.me.id, targetId)).set({ from: S.me.id, to: targetId, createdAt: new Date().toISOString() });
       await Db.collection("notifications").add({ to: targetId, from: S.me.id, kind: "share", dismissed: false, createdAt: new Date().toISOString() });
