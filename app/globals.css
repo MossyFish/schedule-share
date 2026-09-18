@@ -33,9 +33,11 @@
     --surface-2-translucent: rgba(243,227,220,0.78);
     --line-accent: #D3E1EF;
     --line-accent2: #EDCEDC;
-    --wave-blue: #DEEDFA;
-    --wave-cream: #FBF2E6;
-    --wave-pink: #FBDFEA;
+    --wave-blue: #EFF6FC;
+    --wave-cream: #FBF6F0;
+    --wave-pink: #FCEFF4;
+    --tab-blue: #B9D8F5;
+    --tab-pink: #F2AFCE;
     --shadow: 0 1px 2px rgba(51,48,42,0.06), 0 8px 24px -12px rgba(51,48,42,0.18);
   }
   @media (prefers-color-scheme: dark) {
@@ -77,6 +79,8 @@
       --wave-blue: #263340;
       --wave-cream: #2E2C29;
       --wave-pink: #362A30;
+      --tab-blue: #3B5578;
+      --tab-pink: #7A3F5C;
       --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
     }
   }
@@ -118,6 +122,8 @@
     --wave-blue: #263340;
     --wave-cream: #2E2C29;
     --wave-pink: #362A30;
+    --tab-blue: #3B5578;
+    --tab-pink: #7A3F5C;
     --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
   }
 
@@ -161,10 +167,7 @@
     align-items: center;
     justify-content: center;
     min-height: 100dvh;
-    background:
-      radial-gradient(72% 55% at 18% 10%, var(--wave-blue) 0%, transparent 85%),
-      radial-gradient(65% 60% at 85% 90%, var(--wave-pink) 0%, transparent 85%),
-      linear-gradient(135deg, var(--wave-blue) 0%, var(--wave-blue) 22%, var(--wave-cream) 50%, var(--wave-pink) 78%, var(--wave-pink) 100%);
+    background: linear-gradient(135deg, var(--wave-blue) 0%, var(--wave-cream) 50%, var(--wave-pink) 100%);
   }
   #splash .mark {
     width: 48px; height: 48px;
@@ -184,10 +187,7 @@
     flex-direction: column;
     padding: 15dvh 28px 28px;
     gap: 30px;
-    background:
-      radial-gradient(72% 55% at 18% 10%, var(--wave-blue) 0%, transparent 85%),
-      radial-gradient(65% 60% at 85% 90%, var(--wave-pink) 0%, transparent 85%),
-      linear-gradient(135deg, var(--wave-blue) 0%, var(--wave-blue) 22%, var(--wave-cream) 50%, var(--wave-pink) 78%, var(--wave-pink) 100%);
+    background: linear-gradient(135deg, var(--wave-blue) 0%, var(--wave-cream) 50%, var(--wave-pink) 100%);
   }
   #auth .brand {
     display: flex;
@@ -233,7 +233,7 @@
     transition: background 0.15s ease, color 0.15s ease;
   }
   #auth .tabs button.active {
-    background: linear-gradient(135deg, var(--accent-soft) 0%, var(--accent-soft) 35%, var(--accent2-soft) 65%, var(--accent2-soft) 100%);
+    background: linear-gradient(135deg, var(--tab-blue), var(--tab-pink));
     color: var(--accent-ink);
   }
   .field { display: flex; flex-direction: column; gap: 6px; }
@@ -288,10 +288,7 @@
 
   /* ---------- App shell ---------- */
   #app, #compare {
-    background:
-      radial-gradient(68% 45% at 15% 6%, var(--wave-blue) 0%, transparent 85%),
-      radial-gradient(62% 45% at 88% 94%, var(--wave-pink) 0%, transparent 85%),
-      linear-gradient(135deg, var(--wave-blue) 0%, var(--wave-blue) 22%, var(--wave-cream) 50%, var(--wave-pink) 78%, var(--wave-pink) 100%);
+    background: linear-gradient(135deg, var(--wave-blue) 0%, var(--wave-cream) 50%, var(--wave-pink) 100%);
   }
   #app { display: none; flex-direction: column; flex: 1; min-height: 100dvh; }
   header.top {
@@ -332,7 +329,7 @@
     border: none; background: transparent; color: var(--muted);
     font-size: 0.78rem; font-weight: 700; padding: 7px 11px; border-radius: 8px; cursor: pointer;
   }
-  .modewtoggle button.active { background: var(--surface); color: var(--accent); box-shadow: var(--shadow); }
+  .modewtoggle button.active { background: linear-gradient(135deg, var(--tab-blue), var(--tab-pink)); color: var(--accent-ink); box-shadow: var(--shadow); }
 
   #notifs { display: flex; flex-direction: column; gap: 8px; padding: 10px 16px 0; }
   .notif-card {
