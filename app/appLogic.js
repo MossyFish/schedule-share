@@ -941,7 +941,7 @@ export function mountApp(root) {
     if (!freeIds.length) return;
     var MAX_SHOWN = 6;
     var wrap = el("div", "free-now");
-    var head = el("div", "free-now-head", freeIds.length + " friend" + (freeIds.length === 1 ? "" : "s") + " free right now (incl. 15 min buffer)");
+    var head = el("div", "free-now-head", freeIds.length + " friend" + (freeIds.length === 1 ? "" : "s") + " free right now");
     wrap.appendChild(head);
 
     if (!S.freeNowExpanded) {
