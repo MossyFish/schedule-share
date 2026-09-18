@@ -914,11 +914,15 @@ export function mountApp(root) {
     } catch (e) { return []; }
   }
 
+  var FREE_NOW_BUFFER_MIN = 15;
+
   function isFreeNow(events) {
     var now = new Date();
     var day = now.getDay();
     var mins = now.getHours() * 60 + now.getMinutes();
-    return !events.some(function (e) { return e.day === day && toMin(e.start) <= mins && mins < toMin(e.end); });
+    return !events.some(function (e) {
+      return e.day === day && mins >= toMin(e.start) - FREE_NOW_BUFFER_MIN && mins < toMin(e.end) + FREE_NOW_BUFFER_MIN;
+    });
   }
 
   async function renderFreeNowWidget(container) {
@@ -937,7 +941,7 @@ export function mountApp(root) {
     if (!freeIds.length) return;
     var MAX_SHOWN = 6;
     var wrap = el("div", "free-now");
-    var head = el("div", "free-now-head", freeIds.length + " friend" + (freeIds.length === 1 ? "" : "s") + " free right now");
+    var head = el("div", "free-now-head", freeIds.length + " friend" + (freeIds.length === 1 ? "" : "s") + " free right now (incl. 15 min buffer)");
     wrap.appendChild(head);
 
     if (!S.freeNowExpanded) {
