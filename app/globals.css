@@ -38,6 +38,8 @@
     --wave-pink: #FCEFF4;
     --tab-blue: #B9D8F5;
     --tab-pink: #F2AFCE;
+    --chip-cream: #FBF3EC;
+    --chip-pink: #F5D7E2;
     --shadow: 0 1px 2px rgba(51,48,42,0.06), 0 8px 24px -12px rgba(51,48,42,0.18);
   }
   @media (prefers-color-scheme: dark) {
@@ -81,6 +83,8 @@
       --wave-pink: #362A30;
       --tab-blue: #3B5578;
       --tab-pink: #7A3F5C;
+      --chip-cream: #34302B;
+      --chip-pink: #3D2B34;
       --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
     }
   }
@@ -124,6 +128,8 @@
     --wave-pink: #362A30;
     --tab-blue: #3B5578;
     --tab-pink: #7A3F5C;
+    --chip-cream: #34302B;
+    --chip-pink: #3D2B34;
     --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
   }
 
@@ -167,7 +173,10 @@
     align-items: center;
     justify-content: center;
     min-height: 100dvh;
-    background: linear-gradient(135deg, var(--wave-blue) 0%, var(--wave-cream) 50%, var(--wave-pink) 100%);
+    background:
+      radial-gradient(48% 38% at 100% 100%, var(--tab-pink) 0%, transparent 70%),
+      radial-gradient(38% 30% at 0% 0%, var(--wave-blue) 0%, transparent 70%),
+      var(--bg);
   }
   #splash .mark {
     width: 48px; height: 48px;
@@ -175,7 +184,7 @@
     background: linear-gradient(135deg, var(--accent), var(--accent2));
     color: var(--accent-ink);
     display: flex; align-items: center; justify-content: center;
-    animation: splash-pulse 1.1s ease-in-out infinite;
+    animation: splash-pulse 1.6s ease-in-out infinite;
   }
   #splash .mark svg { width: 24px; height: 24px; }
   @keyframes splash-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
@@ -187,7 +196,10 @@
     flex-direction: column;
     padding: 15dvh 28px 28px;
     gap: 30px;
-    background: linear-gradient(135deg, var(--wave-blue) 0%, var(--wave-cream) 50%, var(--wave-pink) 100%);
+    background:
+      radial-gradient(48% 38% at 100% 100%, var(--tab-pink) 0%, transparent 70%),
+      radial-gradient(38% 30% at 0% 0%, var(--wave-blue) 0%, transparent 70%),
+      var(--bg);
   }
   #auth .brand {
     display: flex;
@@ -288,7 +300,10 @@
 
   /* ---------- App shell ---------- */
   #app, #compare {
-    background: linear-gradient(135deg, var(--wave-blue) 0%, var(--wave-cream) 50%, var(--wave-pink) 100%);
+    background:
+      radial-gradient(48% 38% at 100% 100%, var(--tab-pink) 0%, transparent 70%),
+      radial-gradient(38% 30% at 0% 0%, var(--wave-blue) 0%, transparent 70%),
+      var(--bg);
   }
   #app { display: none; flex-direction: column; flex: 1; min-height: 100dvh; }
   header.top {
@@ -333,7 +348,7 @@
 
   #notifs { display: flex; flex-direction: column; gap: 8px; padding: 10px 16px 0; }
   .notif-card {
-    background: var(--accent2-soft);
+    background: linear-gradient(135deg, var(--chip-cream) 0%, var(--chip-cream) 55%, var(--chip-pink) 100%);
     border: 1px solid var(--line-accent2);
     border-radius: 12px;
     padding: 12px 14px;
@@ -364,7 +379,7 @@
   .upload-tile .chip {
     width: 42px; height: 42px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    background: linear-gradient(135deg, var(--accent-soft), var(--accent2-soft));
+    background: linear-gradient(135deg, var(--chip-cream) 0%, var(--chip-cream) 55%, var(--chip-pink) 100%);
   }
   .upload-tile .chip svg { width: 21px; height: 21px; color: var(--accent-ink); }
   .upload-tile span { font-size: 0.82rem; font-weight: 600; }
@@ -405,7 +420,7 @@
 
   .count-badge {
     font-size: 0.72rem; font-weight: 700; color: var(--accent-ink);
-    background: linear-gradient(135deg, var(--accent-soft), var(--accent2-soft));
+    background: linear-gradient(135deg, var(--chip-cream) 0%, var(--chip-cream) 55%, var(--chip-pink) 100%);
     padding: 3px 10px; border-radius: 999px;
   }
 
@@ -463,7 +478,7 @@
   .mutual-tile .chevron { color: var(--faint); flex-shrink: 0; }
   .mutual-tile .chevron svg { width: 17px; height: 17px; }
 
-  .btn-shared { background: var(--accent2-soft); color: var(--accent2); }
+  .btn-shared { background: linear-gradient(135deg, var(--chip-cream) 0%, var(--chip-cream) 55%, var(--chip-pink) 100%); color: var(--accent2); }
   .btn-shared:hover { filter: brightness(0.97); }
   .pencil { border: none; background: transparent; color: var(--faint); cursor: pointer; padding: 6px; flex-shrink: 0; }
   .pencil svg { width: 15px; height: 15px; }

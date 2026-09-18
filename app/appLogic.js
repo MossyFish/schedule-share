@@ -411,6 +411,9 @@ export function mountApp(root) {
   }
 
   // ---------------- init ----------------
+  var WAS_LOGGED_IN_KEY = "scheduleShareWasLoggedIn";
+  var authGraceTimer = null;
+
   function init() {
     applyStoredThemeIfAny();
     $("#auth-theme-slot").appendChild(buildThemeToggle());
@@ -419,9 +422,25 @@ export function mountApp(root) {
       if (!user) {
         if (S.me) teardownSession();
         S.me = null;
+        var expectingSession = false;
+        try { expectingSession = localStorage.getItem(WAS_LOGGED_IN_KEY) === "1"; } catch (e) {}
+        // A returning, previously-logged-in browser sometimes gets one
+        // premature "no user yet" callback while Firebase is still
+        // restoring the persisted session — showing the login form
+        // immediately in that case flashes it right before the real
+        // user comes through. Give it a brief grace window instead.
+        if (expectingSession && !authGraceTimer) {
+          authGraceTimer = setTimeout(function () {
+            authGraceTimer = null;
+            showAuthScreen();
+          }, 1500);
+          return;
+        }
         showAuthScreen();
         return;
       }
+      if (authGraceTimer) { clearTimeout(authGraceTimer); authGraceTimer = null; }
+      try { localStorage.setItem(WAS_LOGGED_IN_KEY, "1"); } catch (e) {}
       if (S.me && S.me.id === user.uid) return;
       try {
         var snap = await getDoc(doc(db, "accounts/" + user.uid));
@@ -609,7 +628,10 @@ export function mountApp(root) {
     S.authMode = "login";
   }
 
-  function logout() { signOut(auth); }
+  function logout() {
+    try { localStorage.removeItem(WAS_LOGGED_IN_KEY); } catch (e) {}
+    signOut(auth);
+  }
 
   // ================= APP =================
   async function enterApp() {
